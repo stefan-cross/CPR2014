@@ -20,11 +20,11 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, route/2]).
+-export([start_link/0, route/2, loop/0]).
 
 start_link() ->
-  register(planner, spawn_link(?MODULE, loop, [])),
-  {ok, planner}.
+  register(?MODULE, spawn_link(?MODULE, loop, [])),
+  {ok, ?MODULE}.
 
 route(from, toList) ->
   io:format("magic_happens_here... ~p~n", [{from, toList}]),
@@ -34,5 +34,4 @@ loop() ->
   receive
     {from, list} -> route(from, list);
     stop -> exit(stopped)
-  end,
-loop().
+  end.
