@@ -26,12 +26,15 @@ start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
   {ok, ?MODULE}.
 
-route(from, toList) ->
-  io:format("magic_happens_here... ~p~n", [{from, toList}]),
+%TODO - have a init function that imports data so route can preform algorithm
+
+route(From, List) ->
+  io:format("magic_happens_here... ~p~n", [{From, List}]),
   loop().
 
 loop() ->
   receive
-    {from, list} -> route(from, list);
-    stop -> exit(stopped)
+    {From, List} -> route(From, List);
+    stop -> exit(stopped);
+    _a -> io:format("Receieved ~p~n", [_a])
   end.
