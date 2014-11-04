@@ -20,21 +20,53 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, route/2, loop/0, init/1]).
+-export([start_link/0, route/2, loop/0, import/1]).
 
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
-  init(file:consult("../file.conf.csv")),
-  {ok, ?MODULE}.
+  {ok, ?MODULE},
+  createtables(),
+  import(file:consult("../file.conf.csv")).
 
-init({ok,
+import({ok,
   [{towns, Towns},
     {distances, Distances},
     {depot, Depots},
     {truck, Trucks},
     {van, Vans}
-  ]}) -> io:format("~w~n", [Towns]).
-  %TODO ets inserts for better data structure support for use in routing algorithm
+  ]}) ->
+  inserttowns(Towns),
+  insertdistances(Distances),
+  insertdepots(Depots),
+  inserttrucks(Trucks),
+  insertvans(Vans).
+
+createtables() ->
+  ets:new(towns, [set, named_table]),
+  ets:new(distances, [set, named_table]),
+  ets:new(depots, [duplicate_bag, named_table]),
+  ets:new(trucks, [duplicate_bag, named_table]),
+  ets:new(vans, [duplicate_bag, named_table]).
+
+inserttowns([H|T]) ->
+  ets:insert(towns, H), inserttowns(T);
+inserttowns([]) -> ok.
+
+insertdistances([H|T]) ->
+  ets:insert(distances, H), insertdistances(T);
+insertdistances([]) -> ok.
+
+insertdepots([H|T]) ->
+  ets:insert(depots, {depot, H}), insertdepots(T);
+insertdepots([]) -> ok.
+
+inserttrucks([H|T]) ->
+  ets:insert(trucks, {truck, H}), inserttrucks(T);
+inserttrucks([]) -> ok.
+
+insertvans([H|T]) ->
+  ets:insert(vans, {van, H}), insertvans(T);
+insertvans([]) -> ok.
 
 route(From, List) ->
   io:format("magic_happens_here... ~p~n", [{From, List}]),
@@ -46,3 +78,4 @@ loop() ->
     stop -> exit(stopped);
     _a -> io:format("Receieved ~p~n", [_a])
   end.
+
