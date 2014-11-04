@@ -20,13 +20,21 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, route/2, loop/0]).
+-export([start_link/0, route/2, loop/0, init/1]).
 
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
+  init(file:consult("../file.conf.csv")),
   {ok, ?MODULE}.
 
-%TODO - have a init function that imports data so route can preform algorithm
+init({ok,
+  [{towns, Towns},
+    {distances, Distances},
+    {depot, Depots},
+    {truck, Trucks},
+    {van, Vans}
+  ]}) -> io:format("~w~n", [Towns]).
+  %TODO ets inserts for better data structure support for use in routing algorithm
 
 route(From, List) ->
   io:format("magic_happens_here... ~p~n", [{From, List}]),
