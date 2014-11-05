@@ -22,6 +22,11 @@
 %% API
 -export([start_link/0, route/2, loop/0, import/1]).
 
+%% Record setup
+-record(towns, {town, population}).
+-record(distances, {town1, town2, distance}).
+
+
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
   {ok, ?MODULE},
@@ -42,18 +47,18 @@ import({ok,
   insertvans(Vans).
 
 createtables() ->
-  ets:new(towns, [set, named_table]),
-  ets:new(distances, [set, named_table]),
+  ets:new(towns, [duplicate_bag, named_table]),
+  ets:new(distances, [duplicate_bag, named_table]),
   ets:new(depots, [duplicate_bag, named_table]),
   ets:new(trucks, [duplicate_bag, named_table]),
   ets:new(vans, [duplicate_bag, named_table]).
 
-inserttowns([H|T]) ->
-  ets:insert(towns, H), inserttowns(T);
+inserttowns([{Town, Pop}|T]) ->
+  ets:insert(towns, [#towns{town = Town, population = Pop}]), inserttowns(T);
 inserttowns([]) -> ok.
 
-insertdistances([H|T]) ->
-  ets:insert(distances, H), insertdistances(T);
+insertdistances([{Town1, Town2, Dist}|T]) ->
+  ets:insert(distances, [#distances{town1=Town1, town2=Town2, distance=Dist}]), insertdistances(T);
 insertdistances([]) -> ok.
 
 insertdepots([H|T]) ->
@@ -76,9 +81,14 @@ insertvans([]) -> ok.
 % Check to see see if we can visit city for purposes of delivering to a
 % adjoined city.
 
+%Sorted = lists:usort(List),
+
+
+route(From, [H|T]) ->
+  [ ets:match(distances, {From, H}) | route(H, T)];
 route(From, List) ->
-  io:format("magic_happens_here... ~p~n", [{From, List}]),
-  loop().
+  ets:match(distances, {From, List}).
+
 
 loop() ->
   receive
