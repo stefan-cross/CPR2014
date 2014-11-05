@@ -10,3 +10,20 @@ Parallel and distributed discrete-event simulation (PDES) in the Erlang language
 
 - Van and Truck location data is likely to change and to actually be states
 later in the exercises
+
+
+Ets for Towns and Distances
+
+http://www.erlang.org/doc/man/ets.html#match-2
+> ets:match(towns, '$1').
+> ets:match(distances, '$1').
+
+
+Q3.1 test data: 
+
+A list of destination cities
+> ["Lublin", "Warszawa", "Lublin", "Gdynia"]
+
+Starting city and destination list
+> {"Radom" , ["Lublin", "Warszawa", "Lublin", "Gdynia"]}
+

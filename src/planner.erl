@@ -68,6 +68,14 @@ insertvans([H|T]) ->
   ets:insert(vans, {van, H}), insertvans(T);
 insertvans([]) -> ok.
 
+
+% Does not have to be optimal, but needs to visit all cities
+% Only go to cities where destination is stated in list
+% if not route between cities return {error, invalid}
+%
+% Check to see see if we can visit city for purposes of delivering to a
+% adjoined city.
+
 route(From, List) ->
   io:format("magic_happens_here... ~p~n", [{From, List}]),
   loop().
