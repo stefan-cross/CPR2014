@@ -22,10 +22,6 @@
 %% API
 -export([start_link/0, route/2, loop/0, import/1]).
 
-%% Record setup
--record(towns, {town, population}).
--record(distances, {town1, town2, distance}).
-
 
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
@@ -53,12 +49,12 @@ createtables() ->
   ets:new(trucks, [duplicate_bag, named_table]),
   ets:new(vans, [duplicate_bag, named_table]).
 
-inserttowns([{Town, Pop}|T]) ->
-  ets:insert(towns, [#towns{town = Town, population = Pop}]), inserttowns(T);
+inserttowns([H|T]) ->
+  ets:insert(towns, H), inserttowns(T);
 inserttowns([]) -> ok.
 
-insertdistances([{Town1, Town2, Dist}|T]) ->
-  ets:insert(distances, [#distances{town1=Town1, town2=Town2, distance=Dist}]), insertdistances(T);
+insertdistances([H|T]) ->
+  ets:insert(distances, H), insertdistances(T);
 insertdistances([]) -> ok.
 
 insertdepots([H|T]) ->
@@ -83,12 +79,31 @@ insertvans([]) -> ok.
 
 %Sorted = lists:usort(List),
 
-
-route(From, [H|T]) ->
-  [ ets:match(distances, {From, H}) | route(H, T)];
 route(From, List) ->
-  ets:match(distances, {From, List}).
+  %io:format("~p~n", [H]),
+  Sorted = lists:usort(List),
+  routeSorted(From, Sorted).
 
+routeSorted(From, [H|T]) ->
+  Distances = ets:match(distances, '$1'),
+  matchDistance(From, H, Distances).
+  %routeSorted(From, T);
+%routeSorted(_, []) -> sorted.
+
+matchDistance(From, To, [H|T]) ->
+  %io:format("~p~n", H).
+  matchSingleDistance(From, To, H).
+
+% > planner:route("Białystok", ["Toruń", "Białystok"]).
+
+matchSingleDistance(From,To,[{Town1,Town2,_Dist}])
+  when From == Town1 ->
+  [match, {Town1, Town2, _Dist}];
+matchSingleDistance(From,To,[{Town1,Town2,_Dist}]) ->
+  [received, {From,To,[{Town1,Town2,_Dist}]}].
+%[ ets:match(distances, {From, H}) | route(H, T)];
+
+% > [{C1, C2, Dist}] = [{[66,105,97,322,121,115,116,111,107],[84,111,114,117,324],357}]
 
 loop() ->
   receive
@@ -97,3 +112,14 @@ loop() ->
     _a -> io:format("Receieved ~p~n", [_a])
   end.
 
+%
+% "Warszawa","Radom",
+% [{[66,105,97,322,121,115,116,111,107],
+% [84,111,114,117,324],
+% 357}]
+%
+% [X,Y,[{C1, C2, Dist}]] = A .
+%
+%
+
+%{[66,105,97,322,121,115,116,111,107],[84,111,114,117,324,44,32,66,105,97,322,121,115,116,111,107],[{[66,105,97,322,121,115,116,111,107],[84,111,114,117,324],357}]}
