@@ -42,6 +42,7 @@ import({ok,
   inserttrucks(Trucks),
   insertvans(Vans).
 
+%TODO parameterise and reduce seperate functions
 createtables() ->
   ets:new(towns, [duplicate_bag, named_table]),
   ets:new(distances, [duplicate_bag, named_table]),
@@ -92,13 +93,15 @@ routeSorted(From, [H|T]) ->
 
 matchDistance(From, To, [H|T]) ->
   %io:format("~p~n", H).
-  matchSingleDistance(From, To, H).
-
+  matchDistance(From, To, T),
+  matchSingleDistance(From, To, H);
+matchDistance(From, To, []) -> matchDistanceFinished.
 % > planner:route("Białystok", ["Toruń", "Białystok"]).
 
+%TODO how to get multiple returns
 matchSingleDistance(From,To,[{Town1,Town2,_Dist}])
-  when From == Town1 ->
-  [match, {Town1, Town2, _Dist}];
+  when From =:= Town1, To =:= Town2 ->
+  [exactmatch, {Town1, Town2, _Dist}];
 matchSingleDistance(From,To,[{Town1,Town2,_Dist}]) ->
   [received, {From,To,[{Town1,Town2,_Dist}]}].
 %[ ets:match(distances, {From, H}) | route(H, T)];
