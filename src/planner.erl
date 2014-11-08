@@ -80,12 +80,12 @@ insertvans([]) -> ok.
 
 route(From, List) ->
   Sorted = lists:usort(List),
-  routeSorted(From, Sorted).
-% Sorted our list and remove dupes
-routeSorted(From, [H|T]) ->
   Distances = ets:match(distances, '$1'),
-  [matchDistance(From, H, Distances)|routeSorted(From, T)];
-routeSorted(From, []) ->
+  routeSorted(From, Sorted, Distances).
+% Sorted our list and remove dupes
+routeSorted(From, [H|T], Distances) ->
+  [matchDistance(From, H, Distances)|routeSorted(H, T, Distances)]; % dont forget we want to move down the list so we disgard the from, and use the head
+routeSorted(_From, [], _Distances) ->
   ok.
 
 % Get out list of distances
@@ -93,12 +93,10 @@ matchDistance(From, To, [DistancesHead|DistancesTail]) ->
   [matchSingleDirectDistance(From, To, DistancesHead) | matchDistance(From, To, DistancesTail)]; % recursively search through distances list
 matchDistance(_From, _To, []) -> ok.
 % First iteration will only handle direct links between towns
-matchSingleDirectDistance(From,To,[{Town1,Town2,_Dist}])
-  when From =:= Town1, To =:= Town2 -> %TODO pattern match with same nammed vars rather then when statement
-  [exact_match, {Town1, Town2, _Dist}];
-matchSingleDirectDistance(From,To,[{Town1,Town2,_Dist}]) % revese pattern match on form, to
-  when From =:= Town2, To =:= Town1 ->
-  [exact_match, {Town1, Town2, _Dist}];
+matchSingleDirectDistance(From,To,[{From,To,_Dist}]) ->
+  [exact_match, {From, To, _Dist}];
+matchSingleDirectDistance(From,To,[{To,From,_Dist}]) -> % revese pattern match on form, to
+  [exact_match, {From, To, _Dist}];
 matchSingleDirectDistance(_From,_To,[{_Town1,_Town2,_Dist}]) -> ok.
 
 % format our returning route list, remove non-matches
