@@ -20,7 +20,7 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, route/2, loop/0, import/1]).
+-export([start_link/0, route/2, formatRoute/1, loop/0, import/1]).
 
 
 start_link() ->
@@ -75,38 +75,36 @@ insertvans([]) -> ok.
 % Only go to cities where destination is stated in list
 % if not route between cities return {error, invalid}
 %
-% Check to see see if we can visit city for purposes of delivering to a
-% adjoined city.
+% Firt iteration will only handle direct links between towns
 
-%Sorted = lists:usort(List),
 
 route(From, List) ->
-  %io:format("~p~n", [H]),
   Sorted = lists:usort(List),
   routeSorted(From, Sorted).
-
+% Sorted our list and remove dupes
 routeSorted(From, [H|T]) ->
   Distances = ets:match(distances, '$1'),
-  matchDistance(From, H, Distances).
-  %routeSorted(From, T);
-%routeSorted(_, []) -> sorted.
+  [matchDistance(From, H, Distances)|routeSorted(From, T)];
+routeSorted(From, []) ->
+  ok.
 
-matchDistance(From, To, [H|T]) ->
-  %io:format("~p~n", H).
-  matchDistance(From, To, T),
-  matchSingleDistance(From, To, H);
-matchDistance(From, To, []) -> matchDistanceFinished.
-% > planner:route("Białystok", ["Toruń", "Białystok"]).
+% Get out list of distances
+matchDistance(From, To, [DistancesHead|DistancesTail]) ->
+  [matchSingleDirectDistance(From, To, DistancesHead) | matchDistance(From, To, DistancesTail)]; % recursively search through distances list
+matchDistance(_From, _To, []) -> ok.
+% First iteration will only handle direct links between towns
+matchSingleDirectDistance(From,To,[{Town1,Town2,_Dist}])
+  when From =:= Town1, To =:= Town2 -> %TODO pattern match with same nammed vars rather then when statement
+  [exact_match, {Town1, Town2, _Dist}];
+matchSingleDirectDistance(From,To,[{Town1,Town2,_Dist}]) % revese pattern match on form, to
+  when From =:= Town2, To =:= Town1 ->
+  [exact_match, {Town1, Town2, _Dist}];
+matchSingleDirectDistance(_From,_To,[{_Town1,_Town2,_Dist}]) -> ok.
 
-%TODO how to get multiple returns
-matchSingleDistance(From,To,[{Town1,Town2,_Dist}])
-  when From =:= Town1, To =:= Town2 ->
-  [exactmatch, {Town1, Town2, _Dist}];
-matchSingleDistance(From,To,[{Town1,Town2,_Dist}]) ->
-  [received, {From,To,[{Town1,Town2,_Dist}]}].
-%[ ets:match(distances, {From, H}) | route(H, T)];
-
-% > [{C1, C2, Dist}] = [{[66,105,97,322,121,115,116,111,107],[84,111,114,117,324],357}]
+% format our returning route list, remove non-matches
+formatRoute(Data) when is_list(Data) ->
+  Pred = fun(El) -> El /= ok end,
+  lists:filter(Pred, Data).
 
 loop() ->
   receive
