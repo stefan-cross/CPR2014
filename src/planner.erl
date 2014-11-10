@@ -84,7 +84,7 @@ route(From, List) ->
   routeSorted(From, Sorted, Distances).
 % Sorted our list and remove dupes
 routeSorted(From, [H|T], Distances) ->
-  [matchDistance(From, H, Distances)|routeSorted(H, T, Distances)]; % dont forget we want to move down the list so we disgard the from, and use the head
+  [matchDistance(From, H, Distances) | routeSorted(H, T, Distances)]; % dont forget we want to move down the list so we disgard the from, and use the head
 routeSorted(_From, [], _Distances) ->
   ok.
 
@@ -97,11 +97,11 @@ matchSingleDirectDistance(From,To,[{From,To,_Dist}]) ->
   [exact_match, {From, To, _Dist}];
 matchSingleDirectDistance(From,To,[{To,From,_Dist}]) -> % revese pattern match on form, to
   [exact_match, {From, To, _Dist}];
-matchSingleDirectDistance(_From,_To,[{_Town1,_Town2,_Dist}]) -> ok.
+matchSingleDirectDistance(_From,_To,[{_Town1,_Town2,_Dist}]) -> nil.
 
 % format our returning route list, remove non-matches
 formatRoute(Data) when is_list(Data) ->
-  Pred = fun(El) -> El /= ok end,
+  Pred = fun(El) -> El /= nil end,
   lists:filter(Pred, Data).
 
 loop() ->
@@ -122,3 +122,6 @@ loop() ->
 %
 
 %{[66,105,97,322,121,115,116,111,107],[84,111,114,117,324,44,32,66,105,97,322,121,115,116,111,107],[{[66,105,97,322,121,115,116,111,107],[84,111,114,117,324],357}]}
+
+
+%[ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,ok,[exact_match,{"Szczecin","Bydgoszcz",256}],ok,ok,ok,ok,ok,ok,ok|ok]
