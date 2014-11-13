@@ -90,10 +90,20 @@ routing(From, List) ->
   subRouting(Return, List).
 
 subRouting([[H|T]|R], [H|_]) ->
-  lists:reverse([H, T]).
-
-%% 140> planner:route("a", ["b"]).
+  lists:reverse([H, T]);
+subRouting([[H]|T], [L]) ->
+  lists:reverse([H, T]);
+subRouting(Options, To) ->
+  {Options, second_clause, To}.
+%%
+%% 167> planner:route("a", ["d"]).
+%% {[["b",97],["c",97]],second_clause,["d"]}
+%% 168> planner:route("a", ["b"]).
 %% ["a","b"]
+%% 169> planner:route("a", ["b"]).
+%% ["a","b"]
+%% 170> planner:route("a", ["c"]).
+%% {[["b",97],["c",97]],second_clause,["c"]}
 
 loop() ->
   receive
