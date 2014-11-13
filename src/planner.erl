@@ -20,14 +20,14 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, route/2, formatRoute/1, loop/0, import/1]).
+-export([start_link/0, route/2, loop/0, import/1]).
 
 
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
   {ok, ?MODULE},
   createtables(),
-  import(file:consult("../file.conf.csv")).
+  import(file:consult("../file.conf.tmp")).
 
 import({ok,
   [{towns, Towns},
@@ -82,27 +82,30 @@ route(From, List) ->
   Sorted = lists:usort(List),
   case directRoute(From, Sorted) of
     [[],[]] -> indirectRoute(From, Sorted);
-    [List] -> List
+    A -> A
   end.
 
+%TODO tidy up direct match results, currently returning;
+% 45> planner:route("Szczecin", ["Bydgoszcz"]).
+% [[["Szczecin","Bydgoszcz"]],[]]
 directRoute(From, [H|T]) ->
-  [ ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}, {'==', '$2', H}], ['$$']}]),
-    ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', H}, {'==', '$2', From}], ['$$']}]) | directRoute(H, T) ];
+  [ ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}, {'==', '$2', H}], [['$1', '$2']]}]),
+    ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', H}, {'==', '$2', From}], [['$2', '$1']]}]) | directRoute(H, T) ];
 directRoute(From, To) ->
-  ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}, {'==', '$2', To}], ['$$']}]),
-  ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', To}, {'==', '$2', From}], ['$$']}]).
+  ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}, {'==', '$2', To}], [['$1', '$2']]}]),
+  ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', To}, {'==', '$2', From}], [['$2', '$1']]}]).
 
-% keep distance and from data?
+% keep distance and from data? Trick is to work out the format of the data that we feed into recursion and our passed var perpective
 indirectRoute(From, To) ->
-  IndirectRoute = [ ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}], [['$2','$1']]}]), % original from becomes tail of list so we can better work with head
-                    ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$2', From}], [['$1','$2']]}])],
-  indirectRoute(To, IndirectRoute);
-indirectRoute(From, [[A, B]|T]) ->
+    [
+    ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}], [['$2','$1']]}]), % original from becomes tail of list so we can better work with head
+    ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$2', From}], [['$1','$2']]}])
+    ].
 
-% format our returning route list, remove non-matches
-formatRoute(Data) when is_list(Data) ->
-  Pred = fun(El) -> El /= nil end,
-  lists:filter(Pred, Data).
+% can match the first round of links
+% > planner:route("Szczecin", ["Toruń"]).
+%[[["Bydgoszcz","Szczecin"]],
+%[[[80,111,122,110,97,324],"Szczecin"]]]
 
 loop() ->
   receive

@@ -67,6 +67,7 @@ https://www.google.com/fusiontables/data?docid=1Y4fldAT2TxjyZx61wH8KrcMBuboM7ZQN
 Useful Syntax
 
 14> ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', "Warszawa"}], ['$$']}]).
+  > ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', "Szczecin"}], ['$$']}]).
 [["Warszawa","Radom",103],
  ["Warszawa",[321,243,100,378],130],
  ["Warszawa",[84,111,114,117,324],208],
@@ -74,3 +75,6 @@ Useful Syntax
  ["Warszawa",[66,105,97,322,121,115,116,111,107],198]]
 15> ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', "Warszawa"}, {'==', '$2', "Radom"}], ['$$']}]).
 [["Warszawa","Radom",103]]
+
+
+ ets:select(distances, [{{'$1','$2','$3'},[{'==','$1',"Szczecin"},['$$']]}])
