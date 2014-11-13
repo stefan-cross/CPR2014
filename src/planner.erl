@@ -80,24 +80,24 @@ insertvans([]) -> ok.
 
 route(From, List) ->
   Sorted = lists:usort(List),
-  Distances = ets:match(distances, '$1'),
-  routeSorted(From, Sorted, Distances).
-% Sorted our list and remove dupes
-routeSorted(From, [H|T], Distances) ->
-  [matchDistance(From, H, Distances) | routeSorted(H, T, Distances)]; % dont forget we want to move down the list so we disgard the from, and use the head
-routeSorted(_From, [], _Distances) ->
-  ok.
+  case directRoute(From, Sorted) of
+    [[],[]] -> indirectRoute(From, Sorted);
+    [List] -> List
+  end.
 
-% Get out list of distances
-matchDistance(From, To, [DistancesHead|DistancesTail]) ->
-  [matchSingleDirectDistance(From, To, DistancesHead) | matchDistance(From, To, DistancesTail)]; % recursively search through distances list
-matchDistance(_From, _To, []) -> ok.
-% First iteration will only handle direct links between towns
-matchSingleDirectDistance(From,To,[{From,To,_Dist}]) ->
-  [exact_match, {From, To, _Dist}];
-matchSingleDirectDistance(From,To,[{To,From,_Dist}]) -> % revese pattern match on form, to
-  [exact_match, {From, To, _Dist}];
-matchSingleDirectDistance(_From,_To,[{_Town1,_Town2,_Dist}]) -> nil.
+directRoute(From, [H|T]) ->
+  [ ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}, {'==', '$2', H}], ['$$']}]),
+    ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', H}, {'==', '$2', From}], ['$$']}]) | directRoute(H, T) ];
+directRoute(From, To) ->
+  ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}, {'==', '$2', To}], ['$$']}]),
+  ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', To}, {'==', '$2', From}], ['$$']}]).
+
+% keep distance and from data?
+indirectRoute(From, To) ->
+  IndirectRoute = [ ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}], [['$2','$1']]}]), % original from becomes tail of list so we can better work with head
+                    ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$2', From}], [['$1','$2']]}])],
+  indirectRoute(To, IndirectRoute);
+indirectRoute(From, [[A, B]|T]) ->
 
 % format our returning route list, remove non-matches
 formatRoute(Data) when is_list(Data) ->
