@@ -80,37 +80,20 @@ insertvans([]) -> ok.
 
 route(From, List) ->
   Sorted = lists:usort(List),
-  case directRoute(From, Sorted) of
-    [[],[],[],[]] -> indirectRoute(From, Sorted);
-    A -> A
-  end.
-
-%TODO tidy up direct match results, currently returning;
-% 45> planner:route("Szczecin", ["Bydgoszcz"]).
-% [[["Szczecin","Bydgoszcz"]],[]]
-directRoute(From, [H|T]) ->
-  [ ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}, {'==', '$2', H}], [['$1', '$2']]}]),
-    ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', H}, {'==', '$2', From}], [['$2', '$1']]}])
-  | directRoute(H, T) ];
-directRoute(From, To) ->
-  [ ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}, {'==', '$2', To}], [['$1', '$2']]}]),
-    ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', To}, {'==', '$2', From}], [['$2', '$1']]}])
-  ].
+  routing(From, Sorted).
 
 % keep distance and from data? Trick is to work out the format of the data that we feed into recursion and our passed var perpective
-indirectRoute(From, To) ->
-  Options =
-    [ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}], [['$2','$1']]}]), % original from becomes tail of list so we can better work with head
-     ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$2', From}], [['$1','$2']]}])],
-  subIndirectRoute(Options, To).
+routing(From, List) ->
+  Option1 = ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}], ['$2']}]),
+  Option2 = ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$2', From}], ['$1']}]),
+  Return = [lists:append(Option1, From), lists:append(Option2, From)],
+  subRouting(Return, List).
 
-subIndirectRoute([[[H|T]]|R], To) ->
-  indirectRoute(H, To);
-subIndirectRoute(Options, To) ->
-  {Options, second_clause, To}.
+subRouting([[H|T]|R], [H|_]) ->
+  lists:reverse([H, T]).
 
-%60> planner:route("a", ["d"]).
-% {[[],[["c","d"],["b","d"]]],second_clause,["d"]}
+%% 140> planner:route("a", ["b"]).
+%% ["a","b"]
 
 loop() ->
   receive
