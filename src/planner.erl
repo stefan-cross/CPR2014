@@ -96,14 +96,16 @@ createDigraphEdges(_Graph, []) ->
   io:format("Edges have been created. ~n").
 
 
+%TODO, check we are passed a list
 route(From, List) ->
   Sorted = lists:usort(List),
   From, routing(From, Sorted).
-routing(From, [H|T]) ->
+routing(From, [H|T]) when From /= H ->
+  % Least number of hops, distance vector based rather then link cost based for now
   [ digraph:get_short_path(lists:nth(1, ets:lookup(graph, digraph)), From, H)
   | routing(H, T) ];
-routing(_From, []) ->
-  [].
+routing(To, [To|_T]) -> [];
+routing(_From, []) -> [].
 %TODO sort into single list with no dupes and reserve order
 
 loop() ->

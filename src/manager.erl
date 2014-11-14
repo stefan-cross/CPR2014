@@ -10,7 +10,7 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, deliver/1, reserve/3, reserve/2, pick/1, drop/1, transit/2, loop/0, send/3]).
+-export([start_link/0, deliver/1, reserve/3, reserve/2, pick/1, drop/1, transit/2, cargo/1, loop/0, send/3]).
 
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
@@ -198,6 +198,32 @@ updateTransitState([[Ref, _Status, _From, To, Kg]], Loc) ->
 %% {error,not_indepot,process_instance}
 %% 114> manager:transit(1415977996858774, "X").
 
+
+cargo(Loc) ->
+  Depots = ets:select(depots, [{{'$1', '$2'}, [], ['$2']}]),
+   ets:new(cargoroute, [ordered_set, named_table]),
+  routeCargo(Loc, Depots).
+
+routeCargo(Loc, [H|T]) ->
+  Route = digraph:get_short_path(lists:nth(1, ets:lookup(graph, digraph)), Loc, H),
+  RouteDistance = length(Route),
+  ets:insert(cargoroute, {RouteDistance, H}),
+  routeCargo(Loc, T);
+routeCargo(_Loc, []) ->
+  % why didnt this work?! ets:select(cargoroute, [{{'$1', '$2'}, ['==', '$1', Val], ['$2']}]).
+  KV = ets:lookup(cargoroute, ets:first(cargoroute)),
+  formatCargoRoute(KV).
+formatCargoRoute([{_K, V}]) ->
+  % dispose of our temp-cargoroute table used to determine shortest route
+  ets:delete(cargoroute),
+  {ok, V}.
+
+%% 147> manager:cargo("Lublin").
+%% {ok,"Kraków"}
+%% 148> manager:cargo("Wrocław").
+%% {ok,[321,243,100,378]}
+%% 149> manager:cargo("Białystok").
+%% {ok,"Warszawa"}
 
   loop() ->
   io:format("In loop"),
