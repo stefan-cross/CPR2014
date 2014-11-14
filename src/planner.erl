@@ -22,12 +22,14 @@
 %% API
 -export([start_link/0, route/2, loop/0, import/1]).
 
+-define(Digraph, digraph:new()).
 
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
   {ok, ?MODULE},
   createtables(),
-  import(file:consult("../file.conf.simple.tmp")).
+  import(file:consult("../file.conf.csv")),
+  createDigraph().
 
 import({ok,
   [{towns, Towns},
@@ -71,6 +73,41 @@ insertvans([H|T]) ->
 insertvans([]) -> ok.
 
 
+createDigraph() ->
+  Graph = digraph:new(),
+  ets:new(graph, [set, named_table]),
+  ets:insert(graph, Graph),
+  io:format("Digraph and ETS graph ref created... ~n"),
+  createDigraphVerticies(Graph, ets:match(towns, '$1')).
+
+createDigraphVerticies(Graph, [[{Town, _D}]|Tail]) ->
+  digraph:add_vertex(Graph, Town), createDigraphVerticies(Graph, Tail);
+createDigraphVerticies(Graph, []) ->
+  io:format("Verticies have been created ~n"),
+  createDigraphEdges(Graph).
+
+createDigraphEdges(Graph) ->
+  Distances = ets:select(distances, [{{'$1', '$2', '$3'}, [], ['$$']}]),
+  createDigraphEdges(Graph, Distances).
+createDigraphEdges(Graph, [[City1, City2, _Dist]|T]) ->
+  digraph:add_edge(Graph, City1, City2),
+  % Make our edges bidirectional
+  digraph:add_edge(Graph, City2, City1),
+  createDigraphEdges(Graph, T);
+createDigraphEdges(_Graph, []) ->
+  io:format("Edges have been created ~n").
+
+
+% WE ARE IN BUSINESS!
+%%
+%% 34> digraph:get_short_path(lists:nth(1, ets:lookup(graph, digraph)), "Szczecin", "Białystok").
+%% ["Szczecin",
+%% [87,114,111,99,322,97,119],
+%% [84,111,114,117,324],
+%% [66,105,97,322,121,115,116,111,107]]
+%% 35> io:format("~s~n", [[87,114,111,99]]).
+
+
 % Does not have to be optimal, but needs to visit all cities
 % Only go to cities where destination is stated in list
 % if not route between cities return {error, invalid}
@@ -82,28 +119,23 @@ route(From, List) ->
   Sorted = lists:usort(List),
   routing(From, Sorted).
 
-% keep distance and from data? Trick is to work out the format of the data that we feed into recursion and our passed var perpective
-routing(From, List) ->
+routing(From, [H|T]) ->
   Option1 = ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}], ['$2']}]),
   Option2 = ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$2', From}], ['$1']}]),
-  Return = [lists:append(Option1, From), lists:append(Option2, From)],
-  subRouting(Return, List).
 
-subRouting([[H|T]|R], [H|_]) ->
-  lists:reverse([H, T]);
-subRouting([[H]|T], [L]) ->
-  lists:reverse([H, T]);
-subRouting(Options, To) ->
-  {Options, second_clause, To}.
-%%
-%% 167> planner:route("a", ["d"]).
-%% {[["b",97],["c",97]],second_clause,["d"]}
-%% 168> planner:route("a", ["b"]).
-%% ["a","b"]
-%% 169> planner:route("a", ["b"]).
-%% ["a","b"]
-%% 170> planner:route("a", ["c"]).
-%% {[["b",97],["c",97]],second_clause,["c"]}
+  if
+    Option1 == H -> lists:append(Option1, From);
+    Option2 == H -> lists:append(Option2, From);
+    Option1 /= H , Option2 == H ->
+      Return = [lists:append(Option1, From), lists:append(Option2, From)],
+      io:format("List = ~p~n", [H]),
+      io:format("Returning = ~p~n", [Return]),
+      subRouting(Return, [H,T])
+  end.
+
+subRouting(List, To) ->
+  {List, To}.
+
 
 loop() ->
   receive

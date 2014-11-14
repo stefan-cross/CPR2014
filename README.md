@@ -66,6 +66,10 @@ https://www.google.com/fusiontables/data?docid=1Y4fldAT2TxjyZx61wH8KrcMBuboM7ZQN
 
 Useful Syntax
 
+List to String:
+io:format("~s~n", [[83, 97, 109, 112, 108, 101]]).
+
+
 14> ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', "Warszawa"}], ['$$']}]).
   > ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', "Szczecin"}], ['$$']}]).
 [["Warszawa","Radom",103],
@@ -78,3 +82,24 @@ Useful Syntax
 
 
  ets:select(distances, [{{'$1','$2','$3'},[{'==','$1',"Szczecin"},['$$']]}])
+ 
+ 
+ Digraphs 
+ 
+ 420> Graph = digraph:new().   
+ {digraph,307222,311319,315416,true}
+ 421> ets:new(graph, [set, named_table]).                            
+ graph
+ 422> ets:insert(graph, Graph).          
+ true
+ 423> ets:match(graph, '$1').                                        
+ [[{digraph,307222,311319,315416,true}]]
+ 424> X = ets:lookup(graph, digraph).
+[{digraph,16400,20497,24594,true}]
+ 425> lists:nth(1, X).
+{digraph,16400,20497,24594,true}
+
+lists:nth(1, ets:lookup(graph, digraph))
+
+40> digraph:vertices(lists:nth(1, ets:lookup(graph, digraph))).
+41> digraph:edges(lists:nth(1, ets:lookup(graph, digraph))).  
