@@ -165,7 +165,41 @@ updateManagerByRef([[Ref, _Status, From, To, Kg]], State) ->
 %% 99> manager:drop(1415976285056521).
 %% {ok,delivered,1415976285056521}
 
-loop() ->
+
+transit(Ref, Loc) ->
+  Trans = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', intransit}, {'==', '$1', Ref}], ['$$']}]),
+  Length = length(Trans),
+  if
+    Length > 0 -> updateTransitState(Trans, Loc), {ok, indepot, Ref};
+    Length =< 1 -> {error, not_indepot, process_instance} %TODO make process_instance identifier dynamic
+  end.
+
+updateTransitState([[Ref, _Status, _From, To, Kg]], Loc) ->
+  ets:delete(manager, Ref),
+  % unfortuantely we cant update bags, only sets,
+  ets:insert(manager, {Ref, indepot, Loc, To, Kg}).
+
+%% 106> manager:send("A", "B", 10).
+%% {ok,1415977993346737}
+%% 107> manager:send("A", "B", 10).
+%% {ok,1415977993874814}
+%% 108> manager:send("A", "C", 10).
+%% {ok,1415977996858774}
+%% 109> manager:send("A", "D", 10).
+%% {ok,1415977999946719}
+%% 110> manager:reserve("A", "B", 20).
+%% {ok,[[1415977993874814,reserved,"A","B",10],
+%% [1415977992083836,reserved,"A","B",10]]}
+%% 111> manager:pick(1415977993874814).
+%% {ok,intransit,1415977993874814}
+%% 112> manager:transit(1415977993874814, "X").
+%% {ok,indepot,1415977993874814}
+%% 113> manager:transit(1415977996858774, "X").
+%% {error,not_indepot,process_instance}
+%% 114> manager:transit(1415977996858774, "X").
+
+
+  loop() ->
   io:format("In loop"),
   receive
     {From, To, Kg} ->
