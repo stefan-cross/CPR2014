@@ -35,25 +35,25 @@ Starting city and destination list
 
 Notes on the journey planner algorithm, an alphabetical approach:
 ----------------------------------------------------------------
-1. Reorder list to group possible duplicates A = ets:usort(ToList)
-2. Check routes between entries in reordered list, From A1
- 2.1. Take starting city and list head
- 2.2. Search destination for match of start and head
-  2.3. if no exact match, find match on start, run matches on corresponding city
-         - find matches with least total distance cost and create temp list of these for later optimisation
-         - select least distance from temp list, use as a candidate for path
-        recursive match on the corresponding city,  
- 3. Repeat process with head and tail, may need to repeat 2.3 to find route between indirect cities
-
-Notes on the journey planner algorithm, an optimal approach:
-1. Reorder list to group possible duplicates
-2. Check routes between entries in reordered list
- 2.1. Take starting city and list head
- 2.2. Search destination for match of start and head
-  2.3. if no exact match, find match on start, run matches on corresponding city
-        recursive match on the corresponding city, find matches with least total distance cost
- 3. Repeat process with head and tail, may need to repeat 2.3 to find route between indirect cities
-      
+    1. Reorder list to group possible duplicates A = ets:usort(ToList)
+    2. Check routes between entries in reordered list, From A1
+     2.1. Take starting city and list head
+     2.2. Search destination for match of start and head
+      2.3. if no exact match, find match on start, run matches on corresponding city
+             - find matches with least total distance cost and create temp list of these for later optimisation
+             - select least distance from temp list, use as a candidate for path
+            recursive match on the corresponding city,  
+     3. Repeat process with head and tail, may need to repeat 2.3 to find route between indirect cities
+    
+    Notes on the journey planner algorithm, an optimal approach:
+    1. Reorder list to group possible duplicates
+    2. Check routes between entries in reordered list
+     2.1. Take starting city and list head
+     2.2. Search destination for match of start and head
+      2.3. if no exact match, find match on start, run matches on corresponding city
+            recursive match on the corresponding city, find matches with least total distance cost
+     3. Repeat process with head and tail, may need to repeat 2.3 to find route between indirect cities
+          
 Consult the following for proven approach to shortest path algorithm:
 http://en.wikipedia.org/wiki/Shortest_path_problem
 
@@ -71,42 +71,44 @@ Useful Syntax
 -------------
 
 List to String:
-io:format("~s~n", [[83, 97, 109, 112, 108, 101]]).
 
-
-14> ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', "Warszawa"}], ['$$']}]).
-  > ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', "Szczecin"}], ['$$']}]).
-[["Warszawa","Radom",103],
- ["Warszawa",[321,243,100,378],130],
- ["Warszawa",[84,111,114,117,324],208],
- ["Warszawa","Lublin",170],
- ["Warszawa",[66,105,97,322,121,115,116,111,107],198]]
-15> ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', "Warszawa"}, {'==', '$2', "Radom"}], ['$$']}]).
-[["Warszawa","Radom",103]]
-
-
- ets:select(distances, [{{'$1','$2','$3'},[{'==','$1',"Szczecin"},['$$']]}])
+    io:format("~s~n", [[83, 97, 109, 112, 108, 101]]).
+    
+    
+    14> ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', "Warszawa"}], ['$$']}]).
+      > ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', "Szczecin"}], ['$$']}]).
+    [["Warszawa","Radom",103],
+     ["Warszawa",[321,243,100,378],130],
+     ["Warszawa",[84,111,114,117,324],208],
+     ["Warszawa","Lublin",170],
+     ["Warszawa",[66,105,97,322,121,115,116,111,107],198]]
+    15> ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', "Warszawa"}, {'==', '$2', "Radom"}], ['$$']}]).
+    [["Warszawa","Radom",103]]
+    
+    
+     ets:select(distances, [{{'$1','$2','$3'},[{'==','$1',"Szczecin"},['$$']]}])
+     
  
+Digraphs
+--------
  
- Digraphs 
- 
- 420> Graph = digraph:new().   
- {digraph,307222,311319,315416,true}
- 421> ets:new(graph, [set, named_table]).                            
- graph
- 422> ets:insert(graph, Graph).          
- true
- 423> ets:match(graph, '$1').                                        
- [[{digraph,307222,311319,315416,true}]]
- 424> X = ets:lookup(graph, digraph).
-[{digraph,16400,20497,24594,true}]
- 425> lists:nth(1, X).
-{digraph,16400,20497,24594,true}
-
-lists:nth(1, ets:lookup(graph, digraph))
-
-40> digraph:vertices(lists:nth(1, ets:lookup(graph, digraph))).
-41> digraph:edges(lists:nth(1, ets:lookup(graph, digraph))).  
+     420> Graph = digraph:new().   
+     {digraph,307222,311319,315416,true}
+     421> ets:new(graph, [set, named_table]).                            
+     graph
+     422> ets:insert(graph, Graph).          
+     true
+     423> ets:match(graph, '$1').                                        
+     [[{digraph,307222,311319,315416,true}]]
+     424> X = ets:lookup(graph, digraph).
+    [{digraph,16400,20497,24594,true}]
+     425> lists:nth(1, X).
+    {digraph,16400,20497,24594,true}
+    
+    lists:nth(1, ets:lookup(graph, digraph))
+    
+    40> digraph:vertices(lists:nth(1, ets:lookup(graph, digraph))).
+    41> digraph:edges(lists:nth(1, ets:lookup(graph, digraph))).  
 
 
 
