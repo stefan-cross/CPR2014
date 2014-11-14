@@ -31,7 +31,9 @@ send(From, To, Kg) ->
 % Assuming deliveries are potentially parcels in transit,
 deliver(Loc) ->
   %TODO deliveries that are going to Loc
-  Deliveries = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', intransit}, {'==', '$4', Loc}], [['$1', '$2', '$3']]}]),
+  % Deliveries, items in transit to Loc
+  Deliveries = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', intransit}, {'==', '$4', Loc}], [['$1', '$2', '$4']]}]),
+  % Pickups, items waiting from Loc
   Pickups = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', waiting}, {'==', '$3', Loc}], [['$1', '$2', '$3']]}]),
   Order = Pickups++Deliveries,
   Length = length(Order),
@@ -60,7 +62,7 @@ deliver(Loc) ->
 %% [1415971287284657,waiting,"A"],
 %% [1415971296020752,waiting,"A"],
 %% [1415971289820290,waiting,"A"],
-%% [1415971287284000,intransit,"B"]]}
+%% [1415971287284000,intransit,"A"]]}
 %% 60>
 
 
