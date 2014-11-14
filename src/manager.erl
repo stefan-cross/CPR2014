@@ -29,8 +29,13 @@ send(From, To, Kg) ->
 
 % doesnt concern weight restrictions
 deliver(Loc) ->
-  Pickups = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$3', Loc}], ['$3']}]),
-  {ok, Pickups}.
+  %TODO deliveries that are going to Loc
+  Pickups = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', waiting}, {'==', '$3', Loc}], [['$1', '$2', '$3']]}]),
+  Length = length(Pickups),
+  if
+    Length > 0 -> {ok, Pickups};
+    Length =< 0 -> {error, instance}
+  end.
 
 reserve(From, To, Kg) ->
   Reserved = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', waiting}, {'==', '$3', From}, {'==', '$4', To}], ['$$']}]),
@@ -38,12 +43,14 @@ reserve(From, To, Kg) ->
   %TODO update status to reserved of selected upto weight limit, rather then delete them
   removeReserved(WeightedReserve),
   {ok, WeightedReserve}.
-weightedReserve([[Ref, Status, From, To, Kg] | T], Ac) when Ac >= Kg ->
+weightedReserve([[Ref, _Status, From, To, Kg] | T], Ac) when Ac >= Kg ->
   [[Ref, reserved, From, To, Kg] | weightedReserve(T, (Ac - Kg))];
 weightedReserve([[_Ref, _Status, _From, _To, _Kg] | _T], _Ac) -> [];
 weightedReserve([], _Ac) -> [].
-removeReserved([[Ref, _Status, _From, _To, _Kg] | T]) ->
+removeReserved([[Ref, _Status, From, To, Kg] | T]) ->
   ets:delete(manager, Ref),
+  % unfortuantely we cant update bags, only sets,
+  ets:insert(manager, {Ref, reserved, From, To, Kg}),
   removeReserved(T);
 removeReserved([]) -> ok.
 
