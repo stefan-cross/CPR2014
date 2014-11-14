@@ -103,3 +103,24 @@ lists:nth(1, ets:lookup(graph, digraph))
 
 40> digraph:vertices(lists:nth(1, ets:lookup(graph, digraph))).
 41> digraph:edges(lists:nth(1, ets:lookup(graph, digraph))).  
+
+
+Notes on Design Decisions:
+
+It has come to light or it is implied on the implementation of manager:lookup that the from
+data remains the same and the location is updated through the journey. 
+
+manager:lookup(Ref) -> {error, instance} |
+         {ok,{Ref,From,To,Kg,Loc|VehiclePid,OwnerPid}}.
+         
+I have instead opted for a state field to save on IO operations and the updating every record
+as it passes through a destination. State can abstract away from this and
+still give an adequate level of detail/insight as to the whereabouts of an order.
+
+I am also assuming that vehicles are best represented as individual processes
+with finite a state. This is referred to as VehiclePid in the specification.
+
+The specification also makes reference to OwnerPid, it is assumed that this
+is a client that initiates the simulations, the client that sends in orders for example...
+
+

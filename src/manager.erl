@@ -10,7 +10,7 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, deliver/1, reserve/3, reserve/2, pick/1, drop/1, transit/2, cargo/1, loop/0, send/3]).
+-export([start_link/0, deliver/1, reserve/3, reserve/2, pick/1, drop/1, transit/2, cargo/1, lookup/1, loop/0, send/3]).
 
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
@@ -224,6 +224,15 @@ formatCargoRoute([{_K, V}]) ->
 %% {ok,[321,243,100,378]}
 %% 149> manager:cargo("Białystok").
 %% {ok,"Warszawa"}
+
+
+lookup(Ref) ->
+  {ok, ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$1', Ref}], ['$$']}]), vehiclePid, ownerPid}.
+
+%%
+%% 160> manager:lookup(1415996772636361).
+%% {ok,[[1415996772636361,waiting,"A","C",12]],
+%% vehiclePid,ownerPid}
 
   loop() ->
   io:format("In loop"),
