@@ -18,8 +18,9 @@ start_link() ->
 
 
 uniqueref({A, B, C}) ->
-  %TODO look up erlang expos, might be neater, need {1415,821017,790736} as int
-  ((A * 1000) * 12) + ((B * 1000) * 6) + C.
+  %TODO math:pow(10, 12). {1415,821017,790736} as int
+  (A * 1000000000000) + (B * 1000000) + C.
+
 
 send(From, To, Kg) ->
   Ref = uniqueref(now()),
