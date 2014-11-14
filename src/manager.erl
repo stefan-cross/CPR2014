@@ -10,7 +10,7 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, deliver/1, reserve/3, reserve/2, loop/0, send/3]).
+-export([start_link/0, deliver/1, reserve/3, reserve/2, pick/1, drop/1, transit/2, loop/0, send/3]).
 
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
@@ -108,6 +108,62 @@ updateReserved([]) -> ok.
 %% 97> manager:reserve("A", "B", 20).
 %% {ok,[[1415965997607945,reserved,"A","B",10],
 %% [1415965996288405,reserved,"A","B",10]]}
+
+pick(Ref) ->
+  Pick = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', reserved}, {'==', '$1', Ref}], ['$$']}]),
+  Length = length(Pick),
+  if
+    Length > 0 -> updateManagerByRef(Pick, intransit), {ok, intransit, Ref};
+    Length =< 1 -> {error, not_reserved, process_instance} %TODO make process_instance identifier dynamic
+  end.
+
+drop(Ref) ->
+  Drop = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', intransit}, {'==', '$1', Ref}], ['$$']}]),
+  Length = length(Drop),
+  if
+    Length > 0 -> updateManagerByRef(Drop, delivered), {ok, delivered, Ref};
+    Length =< 1 -> {error, not_reserved, process_instance} %TODO make process_instance identifier dynamic
+  end.
+
+% Used by pick and drop
+updateManagerByRef([[Ref, _Status, From, To, Kg]], State) ->
+  ets:delete(manager, Ref),
+  % unfortuantely we cant update bags, only sets,
+  ets:insert(manager, {Ref, State, From, To, Kg}).
+
+%% 85> manager:send("A", "B", 10).
+%% {ok,1415976283352170}
+%% 86> manager:send("A", "B", 10).
+%% {ok,1415976283944349}
+%% 87> manager:send("A", "B", 10).
+%% {ok,1415976284480379}
+%% 88> manager:send("A", "B", 10).
+%% {ok,1415976285056521}
+%% 89> manager:drop(1415975263454240).
+%% {ok,delivered,1415975263454240}
+%% 90> manager:drop(1415975263454240).
+%% {error,not_reserved,process_instance}
+%% 91> manager:drop(1415975262934475).
+%% {error,not_reserved,process_instance}
+%% 92> manager:drop(1415975264599003).
+%% {ok,delivered,1415975264599003}
+%% 93> manager:reserve("A", "B", 40).
+%% {ok,[[1415976285056521,reserved,"A","B",10],
+%% [1415976283352170,reserved,"A","B",10],
+%% [1415976284480379,reserved,"A","B",10],
+%% [1415975263974289,reserved,"A","B",10]]}
+%% 94> manager:pick("A").
+%% {error,not_reserved,process_instance}
+%% 95> manager:pick(1415976285056521).
+%% {ok,intransit,1415976285056521}
+%% 96> manager:pick(1415976283352170).
+%% {ok,intransit,1415976283352170}
+%% 97> manager:pick([1415976283352170, 1415976283352170]).
+%% {error,not_reserved,process_instance}
+%% 98> manager:drop(1415976283352170).
+%% {ok,delivered,1415976283352170}
+%% 99> manager:drop(1415976285056521).
+%% {ok,delivered,1415976285056521}
 
 loop() ->
   io:format("In loop"),
