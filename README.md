@@ -1,8 +1,9 @@
 
 CPR coursework Oct 2014
+=======================
 
-At a high level the coursework has themes of a Courier Delivery Problem, 
-and simulation. 
+**At a high level the coursework has themes of a Courier Delivery Problem, 
+and simulation.**
 
 Parallel and distributed discrete-event simulation (PDES) in the Erlang language.
 
@@ -31,25 +32,27 @@ Starting city and destination list
 > {"Radom" , ["Lublin", "Warszawa", "Lublin", "Gdynia"]}
 
 
+
 Notes on the journey planner algorithm, an alphabetical approach:
-1 - Reorder list to group possible duplicates A = ets:usort(ToList)
-2 - Check routes between entries in reordered list, From A1
- 2.1 - Take starting city and list head
- 2.2 - Search destination for match of start and head
-  2.3 - if no exact match, find match on start, run matches on corresponding city
+----------------------------------------------------------------
+1. Reorder list to group possible duplicates A = ets:usort(ToList)
+2. Check routes between entries in reordered list, From A1
+ 2.1. Take starting city and list head
+ 2.2. Search destination for match of start and head
+  2.3. if no exact match, find match on start, run matches on corresponding city
          - find matches with least total distance cost and create temp list of these for later optimisation
          - select least distance from temp list, use as a candidate for path
         recursive match on the corresponding city,  
- 3 - Repeat process with head and tail, may need to repeat 2.3 to find route between indirect cities
+ 3. Repeat process with head and tail, may need to repeat 2.3 to find route between indirect cities
 
 Notes on the journey planner algorithm, an optimal approach:
-1 - Reorder list to group possible duplicates
-2 - Check routes between entries in reordered list
- 2.1 - Take starting city and list head
- 2.2 - Search destination for match of start and head
-  2.3 - if no exact match, find match on start, run matches on corresponding city
+1. Reorder list to group possible duplicates
+2. Check routes between entries in reordered list
+ 2.1. Take starting city and list head
+ 2.2. Search destination for match of start and head
+  2.3. if no exact match, find match on start, run matches on corresponding city
         recursive match on the corresponding city, find matches with least total distance cost
- 3 - Repeat process with head and tail, may need to repeat 2.3 to find route between indirect cities
+ 3. Repeat process with head and tail, may need to repeat 2.3 to find route between indirect cities
       
 Consult the following for proven approach to shortest path algorithm:
 http://en.wikipedia.org/wiki/Shortest_path_problem
@@ -65,6 +68,7 @@ https://www.google.com/fusiontables/data?docid=1Y4fldAT2TxjyZx61wH8KrcMBuboM7ZQN
 
 
 Useful Syntax
+-------------
 
 List to String:
 io:format("~s~n", [[83, 97, 109, 112, 108, 101]]).
@@ -105,9 +109,48 @@ lists:nth(1, ets:lookup(graph, digraph))
 41> digraph:edges(lists:nth(1, ets:lookup(graph, digraph))).  
 
 
-Notes on Design Decisions:
 
-It has come to light or it is implied on the implementation of manager:lookup that the from
+
+Notes on distribution of Depots:
+-------------------------------
+
+For some basic testing it has come to light that the initial distribution
+of depots is not optimal;
+
+140> manager:cargo("Gdynia").
+{ok,[321,243,100,378]}
+141> manager:cargo("Bydgoszcz").
+{ok,[321,243,100,378]}
+142> manager:cargo("Poznań").   
+{ok,[321,243,100,378]}
+143> manager:cargo("Katowice").
+{ok,"Kraków"}
+144> manager:cargo("Toruń").   
+{ok,[321,243,100,378]}
+145> manager:cargo("Radom").
+{ok,[321,243,100,378]}
+146> manager:cargo("Sosnowiec").
+{ok,[321,243,100,378]}
+147> manager:cargo("Lublin").   
+{ok,"Kraków"}
+148> 
+148> manager:cargo("Wrocław").
+{ok,[321,243,100,378]}
+149> manager:cargo("Białystok").
+{ok,"Warszawa"}
+
+When cross referenced with a visual aid (see docs/maps/) one can see easily that 
+the deployment of a depot in Ludz is only going to be utilised by a few cities,
+Lublin and Katowice. It would be good to test the hypothesis that 'depots 
+are less efficient when placed on the edge of a network' or 'optimal depots
+are not on network perimeters'
+
+
+
+Notes on Design Decisions:
+--------------------------
+
+It is implied on the implementation of manager:lookup that the from
 data remains the same and the location is updated through the journey. 
 
 manager:lookup(Ref) -> {error, instance} |
