@@ -16,7 +16,7 @@
 -author("stefancross").
 
 %% API
--export([start/1, init/0, loop/0]).
+-export([start/1, init/0]).
 
 % Config var as tuple that dynamically creates name and type eg van or truck, passed to init()
 start(Name)->
@@ -26,13 +26,24 @@ start(Name)->
 init() ->
   % other config options to go here, set capacity?
   process_flag(trap_exit, true),
-  loop().
+  atlocation("Kraków").
   % dynamically set starting location
 
 % states as loops, heres something basic to get going
-loop() ->
+atlocation(Loc) ->
+  io:format("Vehicle at location: ~p~n", [Loc]),
   receive
-    {Msg} -> io:format("Recieved ~p~n", [Msg]),
-             loop();
+    {From, To, Dist} ->
+      io:format("Recieved ~p~n", [{From, To, Dist}]),
+      intransit(),
+      van ! {From, To, Dist};
     stop -> exit(stopped)
+  end.
+
+intransit() ->
+  receive
+    {From, To, Dist} ->
+      io:format("Vehicle in transit ~p~n", [{From, To, Dist}]),
+      timer:wait(Dist),
+      atlocation(To)
   end.
