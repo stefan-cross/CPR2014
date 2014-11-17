@@ -16,46 +16,28 @@
 -author("stefancross").
 
 %% API
--export([start/1, init/0]).
+-export([start/2, init/2]).
 
-% Config var as tuple that dynamically creates name and type eg van or truck, passed to init()
-start(Name)->
-  register(Name, spawn(?MODULE, init, [])),
-  {pid_created, Name}.
+start(Pid, Loc)->
+  register(Pid, spawn(?MODULE, init, [Pid, Loc])),
+  {pid_created, Pid}.
 
-init() ->
-  % other config options to go here, set capacity?
+init(Pid, Loc) ->
   process_flag(trap_exit, true),
-  atlocation("Kraków").
-  % dynamically set starting location
+  % now we have a Pid we can go back to manager:lookup and work on VehiclePid and OwnerPid concepts
+  % capacity set if logic, it is not a property to be imported...
+  atlocation(Pid, Loc).
 
-% states as loops, heres something basic to get going
-atlocation(Loc) ->
-  io:format("Vehicle at location: ~p~n", [Loc]),
+atlocation(Pid, Loc) ->
+  io:format("Vehicle : ~p , at location: ~p~n", [Pid, Loc]),
   receive
-    {From, To, Dist} ->
-      io:format("Recieved ~p~n", [{From, To, Dist}]),
-      intransit({From, To, Dist});
+    {Pid, From, To, Dist} ->
+      intransit({Pid, From, To, Dist});
     stop -> exit(stopped)
   end.
 
-intransit({From, To, Dist}) ->
-  io:format("Vehicle in transit ~p~n", [{From, To, Dist}]),
+intransit({Pid, From, To, Dist}) ->
+  io:format("Vehicle  ~p , in transit ~p~n", [Pid, {From, To, Dist}]),
   timer:sleep(Dist),
-  atlocation(To).
+  atlocation(Pid, To).
 
-%% 10> c(vehicle).
-%% {ok,vehicle}
-%% 11> vehicle:start(van).
-%% Vehicle at location: "Kraków"
-%% {pid_created,van}
-%% 12> van ! {"A", "B", 2000}.
-%% Recieved {"A","B",2000}
-%% Vehicle in transit {"A","B",2000}
-%% {"A","B",2000}
-%% Vehicle at location: "B"
-%% 14> van ! {"B", "C", 1000}.
-%% Recieved {"B","C",1000}
-%% Vehicle in transit {"B","C",1000}
-%% {"B","C",1000}
-%% Vehicle at location: "C"

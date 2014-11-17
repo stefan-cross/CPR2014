@@ -27,7 +27,8 @@ start_link() ->
   {ok, ?MODULE},
   createtables(),
   import(file:consult("../file.conf.csv")),
-  createDigraph().
+  createDigraph(),
+  createVans().
 
 import({ok,
   [{towns, Towns},
@@ -40,7 +41,8 @@ import({ok,
   insertdistances(Distances),
   insertdepots(Depots),
   inserttrucks(Trucks),
-  insertvans(Vans).
+  insertvans(Vans, 1),
+  io:format("Config imported. ~n").
 
 %TODO parameterise and reduce seperate functions
 createtables() ->
@@ -66,16 +68,16 @@ inserttrucks([H|T]) ->
   ets:insert(trucks, {truck, H}), inserttrucks(T);
 inserttrucks([]) -> ok.
 
-insertvans([H|T]) ->
-  ets:insert(vans, {van, H}), insertvans(T);
-insertvans([]) -> ok.
+insertvans([H|T], Acc) ->
+  ets:insert(vans, {Acc, H}), insertvans(T, Acc + 1);
+insertvans([], _Acc) -> ok.
 
 
 createDigraph() ->
   Graph = digraph:new(),
   ets:new(graph, [set, named_table]),
   ets:insert(graph, Graph),
-  io:format("Digraph and ETS graph ref created... ~n"),
+  io:format("Digraph and ETS graph ref created as ~p.~n", [ets:lookup(graph, digraph)]),
   createDigraphVerticies(Graph, ets:match(towns, '$1')).
 
 createDigraphVerticies(Graph, [[{Town, _D}]|Tail]) ->
@@ -94,6 +96,16 @@ createDigraphEdges(Graph, [[City1, City2, _Dist]|T]) ->
   createDigraphEdges(Graph, T);
 createDigraphEdges(_Graph, []) ->
   io:format("Edges have been created. ~n").
+
+createVans() ->
+  First = ets:first(vans),
+  createVans(ets:lookup(vans, First)).
+createVans([{N, Loc}]) ->
+  Name = list_to_atom(atom_to_list(van) ++ integer_to_list(N)),
+  vehicle:start(Name, Loc),
+  createVans(ets:lookup(vans, ets:next(vans, N)));
+createVans([]) -> io:format("All vans registered. ~n").
+
 
 
 %TODO, check we are passed a list
