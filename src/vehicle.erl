@@ -35,15 +35,27 @@ atlocation(Loc) ->
   receive
     {From, To, Dist} ->
       io:format("Recieved ~p~n", [{From, To, Dist}]),
-      intransit(),
-      van ! {From, To, Dist};
+      intransit({From, To, Dist});
     stop -> exit(stopped)
   end.
 
-intransit() ->
-  receive
-    {From, To, Dist} ->
-      io:format("Vehicle in transit ~p~n", [{From, To, Dist}]),
-      timer:wait(Dist),
-      atlocation(To)
-  end.
+intransit({From, To, Dist}) ->
+  io:format("Vehicle in transit ~p~n", [{From, To, Dist}]),
+  timer:sleep(Dist),
+  atlocation(To).
+
+%% 10> c(vehicle).
+%% {ok,vehicle}
+%% 11> vehicle:start(van).
+%% Vehicle at location: "Kraków"
+%% {pid_created,van}
+%% 12> van ! {"A", "B", 2000}.
+%% Recieved {"A","B",2000}
+%% Vehicle in transit {"A","B",2000}
+%% {"A","B",2000}
+%% Vehicle at location: "B"
+%% 14> van ! {"B", "C", 1000}.
+%% Recieved {"B","C",1000}
+%% Vehicle in transit {"B","C",1000}
+%% {"B","C",1000}
+%% Vehicle at location: "C"
