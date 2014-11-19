@@ -41,3 +41,14 @@ intransit({Pid, From, To, Dist}) ->
   timer:sleep(Dist),
   atlocation(Pid, To).
 
+%%
+%% 6> van10 ! {van10, a, b, 5000}, van10 ! {van10, b, c, 2000}, van1 ! {van1, a, b, 1000},van3 ! {van3, x, y, 500}.
+%% Vehicle  van10 , in transit {a,b,5000}
+%% Vehicle  van1 , in transit {a,b,1000}
+%% Vehicle  van3 , in transit {x,y,500}
+%% {van3,x,y,500}
+%% Vehicle : van3 , at location: y
+%% Vehicle : van1 , at location: b
+%% Vehicle : van10 , at location: b
+%% Vehicle  van10 , in transit {b,c,2000}
+%% Vehicle : van10 , at location: c

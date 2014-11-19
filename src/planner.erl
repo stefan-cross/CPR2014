@@ -28,7 +28,8 @@ start_link() ->
   createtables(),
   import(file:consult("../file.conf.csv")),
   createDigraph(),
-  createVans().
+  createVehicles(truck),
+  createVehicles(van).
 
 import({ok,
   [{towns, Towns},
@@ -40,8 +41,8 @@ import({ok,
   inserttowns(Towns),
   insertdistances(Distances),
   insertdepots(Depots),
-  inserttrucks(Trucks),
-  insertvans(Vans, 1),
+  insertVehicles(truck, Trucks, 1),
+  insertVehicles(van, Vans, 1),
   io:format("Config imported. ~n").
 
 %TODO parameterise and reduce seperate functions
@@ -49,8 +50,8 @@ createtables() ->
   ets:new(towns, [duplicate_bag, named_table]),
   ets:new(distances, [duplicate_bag, named_table]),
   ets:new(depots, [duplicate_bag, named_table]),
-  ets:new(trucks, [duplicate_bag, named_table]),
-  ets:new(vans, [duplicate_bag, named_table]).
+  ets:new(truck, [duplicate_bag, named_table]),
+  ets:new(van, [duplicate_bag, named_table]).
 
 inserttowns([H|T]) ->
   ets:insert(towns, H), inserttowns(T);
@@ -64,13 +65,10 @@ insertdepots([H|T]) ->
   ets:insert(depots, {depot, H}), insertdepots(T);
 insertdepots([]) -> ok.
 
-inserttrucks([H|T]) ->
-  ets:insert(trucks, {truck, H}), inserttrucks(T);
-inserttrucks([]) -> ok.
+insertVehicles(Vehicle, [H|T], Acc) ->
+  ets:insert(Vehicle, {Acc, H}), insertVehicles(Vehicle, T, Acc + 1);
+insertVehicles(_Vehicle, [], _Acc) -> ok.
 
-insertvans([H|T], Acc) ->
-  ets:insert(vans, {Acc, H}), insertvans(T, Acc + 1);
-insertvans([], _Acc) -> ok.
 
 
 createDigraph() ->
@@ -97,15 +95,14 @@ createDigraphEdges(Graph, [[City1, City2, _Dist]|T]) ->
 createDigraphEdges(_Graph, []) ->
   io:format("Edges have been created. ~n").
 
-createVans() ->
-  First = ets:first(vans),
-  createVans(ets:lookup(vans, First)).
-createVans([{N, Loc}]) ->
-  Name = list_to_atom(atom_to_list(van) ++ integer_to_list(N)),
+createVehicles(Vehicle) ->
+  First = ets:first(Vehicle),
+  createVehicles(ets:lookup(Vehicle, First), Vehicle).
+createVehicles([{N, Loc}], Vehicle) ->
+  Name = list_to_atom(atom_to_list(Vehicle) ++ integer_to_list(N)),
   vehicle:start(Name, Loc),
-  createVans(ets:lookup(vans, ets:next(vans, N)));
-createVans([]) -> io:format("All vans registered. ~n").
-
+  createVehicles(ets:lookup(Vehicle, ets:next(Vehicle, N)), Vehicle);
+createVehicles([], Vehicle) -> io:format("All ~ps registered. ~n", [Vehicle]).
 
 
 %TODO, check we are passed a list
