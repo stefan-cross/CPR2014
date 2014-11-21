@@ -30,11 +30,10 @@ send(From, To, Kg) ->
 
 % Assuming deliveries are potentially parcels in transit,
 deliver(Loc) ->
-  %TODO deliveries that are going to Loc
-  % Deliveries, items in transit to Loc
-  Deliveries = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', intransit}, {'==', '$4', Loc}], [['$1', '$2', '$4']]}]),
+  % Deliveries, items in transit to Loc ~TODO check logic
+  Deliveries = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', intransit}, {'==', '$4', Loc}], ['$3']}]),
   % Pickups, items waiting from Loc
-  Pickups = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', waiting}, {'==', '$3', Loc}], [['$1', '$2', '$3']]}]),
+  Pickups = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', waiting}, {'==', '$3', Loc}], ['$4']}]),
   Order = Pickups++Deliveries,
   Length = length(Order),
   if
@@ -94,6 +93,7 @@ updateReserved([[Ref, _Status, From, To, Kg] | T]) ->
   ets:insert(manager, {Ref, reserved, From, To, Kg}),
   updateReserved(T);
 updateReserved([]) -> ok.
+
 %% working!
 %% 92> c(manager).
 %% {ok,manager}
@@ -110,19 +110,19 @@ updateReserved([]) -> ok.
 %% [1415965996288405,reserved,"A","B",10]]}
 
 pick(Ref) ->
-  Pick = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', reserved}, {'==', '$1', Ref}], ['$$']}]),
+  Pick = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$1', Ref}], ['$$']}]), % had to remove match on {'==', '$2', reserved},
   Length = length(Pick),
   if
-    Length > 0 -> updateManagerByRef(Pick, intransit), {ok, intransit, Ref};
-    Length =< 1 -> {error, not_reserved, process_instance} %TODO make process_instance identifier dynamic
+    Length == 1 -> updateManagerByRef(Pick, intransit), {ok, intransit, Ref};
+    Length == 0 -> {error, Ref, not_intransit, process_instance} %TODO make process_instance identifier dynamic
   end.
 
 drop(Ref) ->
   Drop = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', intransit}, {'==', '$1', Ref}], ['$$']}]),
   Length = length(Drop),
   if
-    Length > 0 -> updateManagerByRef(Drop, delivered), {ok, delivered, Ref};
-    Length =< 1 -> {error, not_reserved, process_instance} %TODO make process_instance identifier dynamic
+    Length >= 1 -> updateManagerByRef(Drop, delivered), {ok, delivered, Ref};
+    Length =< 0 -> {error, not_reserved, process_instance} %TODO make process_instance identifier dynamic
   end.
 
 % Used by pick and drop
@@ -170,8 +170,8 @@ transit(Ref, Loc) ->
   Trans = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', intransit}, {'==', '$1', Ref}], ['$$']}]),
   Length = length(Trans),
   if
-    Length > 0 -> updateTransitState(Trans, Loc), {ok, indepot, Ref};
-    Length =< 1 -> {error, not_indepot, process_instance} %TODO make process_instance identifier dynamic
+    Length >= 1 -> updateTransitState(Trans, Loc), {ok, indepot, Ref};
+    Length =< 0 -> {error, not_indepot, process_instance} %TODO make process_instance identifier dynamic
   end.
 
 updateTransitState([[Ref, _Status, _From, To, Kg]], Loc) ->

@@ -20,13 +20,17 @@
 
 start(Pid, Loc)->
   register(Pid, spawn(?MODULE, init, [Pid, Loc])),
+  orchestration:start(Pid, Loc),
   {pid_created, Pid}.
 
 init(Pid, Loc) ->
-  process_flag(trap_exit, true),
+  atlocation(Pid, Loc).
+
   % now we have a Pid we can go back to manager:lookup and work on VehiclePid and OwnerPid concepts
   % capacity set if logic, it is not a property to be imported...
-  atlocation(Pid, Loc).
+
+  % Strategy is to focus on one vehicle for now, unsure how to reserve without the Pid?
+
 
 atlocation(Pid, Loc) ->
   io:format("Vehicle : ~p , at location: ~p~n", [Pid, Loc]),
@@ -38,12 +42,12 @@ atlocation(Pid, Loc) ->
 
 intransit({Pid, From, To, Dist}) ->
   io:format("Vehicle  ~p , in transit ~p~n", [Pid, {From, To, Dist}]),
-  timer:sleep(Dist),
-  atlocation(Pid, To).
+  timer:sleep(Dist),%% 6> van10 ! {van10, a, b, 5000}, van10 ! {van10, b, c, 2000}, van1 ! {van1, a, b, 1000},van3 ! {van3, x, y, 500}.
+%% Vehicle
+atlocation(Pid, To).
 
 %%
-%% 6> van10 ! {van10, a, b, 5000}, van10 ! {van10, b, c, 2000}, van1 ! {van1, a, b, 1000},van3 ! {van3, x, y, 500}.
-%% Vehicle  van10 , in transit {a,b,5000}
+%% van10 , in transit {a,b,5000}
 %% Vehicle  van1 , in transit {a,b,1000}
 %% Vehicle  van3 , in transit {x,y,500}
 %% {van3,x,y,500}
