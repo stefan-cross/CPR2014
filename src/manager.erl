@@ -10,7 +10,7 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, deliver/1, reserve/3, reserve/2, pick/1, drop/1, transit/2, cargo/1, lookup/1, loop/0, send/3]).
+-export([start_link/0, deliver/1, reserve/3, reserve/2, pick/1, drop/1, uniqueref/1, transit/2, cargo/1, lookup/1, loop/0, send/3]).
 
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
@@ -19,13 +19,13 @@ start_link() ->
 
 
 uniqueref({A, B, C}) ->
-  %TODO math:pow(10, 12). {1415,821017,790736} as int
   (A * 1000000000000) + (B * 1000000) + C.
 
 
 send(From, To, Kg) ->
   Ref = uniqueref(now()),
   ets:insert(manager, {Ref, waiting, From, To, Kg}),
+  io:format("Order sent: ~p ~p ~p ~p ~n", [Ref, From, To, Kg]),
   {ok, Ref}.
 
 % Assuming deliveries are potentially parcels in transit,
@@ -41,33 +41,8 @@ deliver(Loc) ->
     Length =< 0 -> {error, instance}
   end.
 
-%% 51> manager:send("A", "B", 10).
-%% {ok,1415971287284657}
-%% 52> manager:send("A", "C", 10).
-%% {ok,1415971289820290}
-%% 53> manager:send("A", "D", 10).
-%% {ok,1415971292269273}
-%% 54> manager:send("A", "B", 10).
-%% {ok,1415971293837010}
-%% 55> manager:send("A", "B", 20).
-%% {ok,1415971296020752}
-%% 56> ets:insert(manager, {1415971287284612,intransit,"A","B",10}).
-%% true
-%% 58> ets:insert(manager, {1415971287284000,intransit,"B","A",10}).
-%% true
-%% 59> manager:deliver("A").
-%% {ok,[[1415971292269273,waiting,"A"],
-%% [1415971293837010,waiting,"A"],
-%% [1415971287284657,waiting,"A"],
-%% [1415971296020752,waiting,"A"],
-%% [1415971289820290,waiting,"A"],
-%% [1415971287284000,intransit,"A"]]}
-%% 60>
 
-
-
-
-%TODO consider allocation to vehicle
+%TODO consider allocation to vehicle, DELETE THEM
 reserve(From, To, Kg) ->
   % Reverse select not quite ordered, but improvement on ets:select which gets oldest first
   Reserved = ets:select_reverse(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', waiting}, {'==', '$3', From}, {'==', '$4', To}], ['$$']}]),
@@ -89,8 +64,9 @@ weightedReserve([[_Ref, _Status, _From, _To, _Kg] | _T], _Ac) -> [];
 weightedReserve([], _Ac) -> [].
 updateReserved([[Ref, _Status, From, To, Kg] | T]) ->
   ets:delete(manager, Ref),
-  % unfortuantely we cant update bags, only sets,
-  ets:insert(manager, {Ref, reserved, From, To, Kg}),
+%%   Now we delete them and handle them in vehicle tabs
+%%   % unfortuantely we cant update bags, only sets,
+%%   ets:insert(manager, {Ref, reserved, From, To, Kg}),
   updateReserved(T);
 updateReserved([]) -> ok.
 
@@ -113,8 +89,8 @@ pick(Ref) ->
   Pick = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$1', Ref}], ['$$']}]), % had to remove match on {'==', '$2', reserved},
   Length = length(Pick),
   if
-    Length == 1 -> updateManagerByRef(Pick, intransit), {ok, intransit, Ref};
-    Length == 0 -> {error, Ref, not_intransit, process_instance} %TODO make process_instance identifier dynamic
+    Length >= 1 -> updateManagerByRef(Pick, intransit), {ok, intransit, Ref};
+    Length =< 0 -> {error, Ref, not_intransit, process_instance} %TODO make process_instance identifier dynamic
   end.
 
 drop(Ref) ->
@@ -129,7 +105,8 @@ drop(Ref) ->
 updateManagerByRef([[Ref, _Status, From, To, Kg]], State) ->
   ets:delete(manager, Ref),
   % unfortuantely we cant update bags, only sets,
-  ets:insert(manager, {Ref, State, From, To, Kg}).
+  ets:insert(manager, {Ref, State, From, To, Kg}),
+  io:format("ETS manager ~p updated ~p ~n", [Ref, State]).
 
 %% 85> manager:send("A", "B", 10).
 %% {ok,1415976283352170}
@@ -234,12 +211,10 @@ lookup(Ref) ->
 %% {ok,[[1415996772636361,waiting,"A","C",12]],
 %% vehiclePid,ownerPid}
 
-  loop() ->
-  io:format("In loop"),
+loop() ->
   receive
-    {From, To, Kg} ->
-      io:format("Message receieved ~p~n", [self()]),
-      send(From, To, Kg),
+    {delivered, Pid, Ref} ->
+      io:format("Manager update, package delivered by ~p! Ref: ~p~n", [Pid, Ref]),
       loop();
     exit ->
       io:format("Exiting"),

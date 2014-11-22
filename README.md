@@ -2,10 +2,28 @@
 CPR coursework Oct 2014
 =======================
 
+
 **At a high level the coursework has themes of a Courier Delivery Problem, 
 and simulation.**
 
 Parallel and distributed discrete-event simulation (PDES) in the Erlang language.
+
+Quick start commands:
+--------------------
+
+Compile everything:
+
+> c(vehicle), c(testing), c(manager), c(planner), c(client), c(orchestration).
+    
+    
+Load everything:
+
+> planner:start_link(), manager:start_link(), client:start(10, 0), observer:start().
+
+
+playing with single vehicle pid data
+> ets:insert(van1, {1416605936537825,reserved,"Kraków",[71,100,97,197,132,115,107],80}).
+
 
 - Input data is structured, can we use meta programming to change behaviour or params depending on the config?
 
@@ -119,27 +137,27 @@ Notes on distribution of Depots:
 For some basic testing it has come to light that the initial distribution
 of depots is not optimal;
 
-140> manager:cargo("Gdynia").
-{ok,[321,243,100,378]}
-141> manager:cargo("Bydgoszcz").
-{ok,[321,243,100,378]}
-142> manager:cargo("Poznań").   
-{ok,[321,243,100,378]}
-143> manager:cargo("Katowice").
-{ok,"Kraków"}
-144> manager:cargo("Toruń").   
-{ok,[321,243,100,378]}
-145> manager:cargo("Radom").
-{ok,[321,243,100,378]}
-146> manager:cargo("Sosnowiec").
-{ok,[321,243,100,378]}
-147> manager:cargo("Lublin").   
-{ok,"Kraków"}
-148> 
-148> manager:cargo("Wrocław").
-{ok,[321,243,100,378]}
-149> manager:cargo("Białystok").
-{ok,"Warszawa"}
+    140> manager:cargo("Gdynia").
+    {ok,[321,243,100,378]}
+    141> manager:cargo("Bydgoszcz").
+    {ok,[321,243,100,378]}
+    142> manager:cargo("Poznań").   
+    {ok,[321,243,100,378]}
+    143> manager:cargo("Katowice").
+    {ok,"Kraków"}
+    144> manager:cargo("Toruń").   
+    {ok,[321,243,100,378]}
+    145> manager:cargo("Radom").
+    {ok,[321,243,100,378]}
+    146> manager:cargo("Sosnowiec").
+    {ok,[321,243,100,378]}
+    147> manager:cargo("Lublin").   
+    {ok,"Kraków"}
+    148> 
+    148> manager:cargo("Wrocław").
+    {ok,[321,243,100,378]}
+    149> manager:cargo("Białystok").
+    {ok,"Warszawa"}
 
 When cross referenced with a visual aid (see docs/maps/) one can see easily that 
 the deployment of a depot in Ludz is only going to be utilised by a few cities,
@@ -168,4 +186,15 @@ with finite a state. This is referred to as VehiclePid in the specification.
 The specification also makes reference to OwnerPid, it is assumed that this
 is a client that initiates the simulations, the client that sends in orders for example...
 
+On implementing the vehicle processes:
 
+As of this commit I am now looking to move the manager est tab and
+distribute it to the vehicle pid ets tabs to for efficiency reasons.
+It will be easier to calc the vehicle capacity this way and
+vehicle state is implicit in the FSM structure. This is also help
+alleviate potential race conditions on all vehicle pids clamouring
+for a central tab and instead attaining some degree of autonomy
+by using a specific pid ets table for the intricacies of the delivery algorithm.
+
+The details of the delivery mechanism is shifted into a orchestration/policy manager class
+allowing us to sub the logic in and out and encapsulate it better.

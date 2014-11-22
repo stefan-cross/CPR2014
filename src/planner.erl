@@ -20,7 +20,7 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, route/2, loop/0, import/1]).
+-export([start_link/0, route/2, loop/0]).
 
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
@@ -45,13 +45,15 @@ import({ok,
   insertVehicles(van, Vans, 1),
   io:format("Config imported. ~n").
 
-%TODO parameterise and reduce seperate functions
+%TODO parameterise and reduce seperate functions for locations
 createtables() ->
   ets:new(towns, [duplicate_bag, named_table]),
   ets:new(distances, [duplicate_bag, named_table]),
   ets:new(depots, [duplicate_bag, named_table]),
   ets:new(truck, [duplicate_bag, named_table]),
-  ets:new(van, [duplicate_bag, named_table]).
+  ets:new(van, [duplicate_bag, named_table]),
+  ets:new(delivered, [duplicate_bag, named_table]),
+  ets:new(pids, [duplicate_bag, named_table]).
 
 inserttowns([H|T]) ->
   ets:insert(towns, H), inserttowns(T);
