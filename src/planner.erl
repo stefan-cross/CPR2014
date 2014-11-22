@@ -36,8 +36,8 @@ start_orders() ->
   client:start(100, 0).
 
 start_vehicles() ->
-  createVehicles(truck),
-  createVehicles(van).
+  createVehicles(van),
+  createVehicles(truck).
 
 import({ok,
   [{towns, Towns},
@@ -60,7 +60,7 @@ createtables() ->
   ets:new(depots, [duplicate_bag, named_table]),
   ets:new(truck, [duplicate_bag, named_table]),
   ets:new(van, [duplicate_bag, named_table]),
-  ets:new(delivered, [duplicate_bag, named_table]),
+  ets:new(delivered, [duplicate_bag, named_table, public]),
   ets:new(pids, [duplicate_bag, named_table]).
 
 inserttowns([H|T]) ->

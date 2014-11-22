@@ -26,7 +26,7 @@
 -author("stefancross").
 
 %% API
--export([start/2]).
+-export([start/2, find_work/2]).
 
 %%%-------------------------------------------------------------------
 %% Policy manager
@@ -35,8 +35,6 @@ start(Pid, Loc) ->
 
   %%%% Precurser, see if theres anything to drop before we start anything else,
   %%%% this frees up potential capacity as well!
-  %TODO only potential problem is that we can enter from and to as same location and they get carted around...
-  %TODO
   Drop = checkDrop(Pid, Loc),
   io:format("~p dropping : ~p ~n", [Pid, Drop]),
 
@@ -47,19 +45,22 @@ start(Pid, Loc) ->
 
   %% 1. Call manager:deliver/1 to get a route assigned.
   Deliveries = manager:deliver(Loc),
-  io:format("Deliveries available: ~p. ~n", [Deliveries]),
+  io:format("~p deliveries available: ~p. ~n", [Pid, Deliveries]),
 
   %% 2. Reserve space for a set of parcel being picked up from one city to another,
   %% ensuring no other truck picks them up using manger:reserve/3.
   %TODO make reservations ahead of arrival, for now only when in location
   %TODO also, look like a vehicle isnt picking up full capacity, but it does id all potential deliveries above...
   Reservations = formatReserve(Loc, Deliveries, Capacity, Pid), % hardcode capacity for now
-  io:format("Reservations complete: ~p ~n", [Reservations]),
+  io:format("~p Reservations complete: ~p ~n", [Pid, Reservations]),
 
   %% 3. The selected vehicle needs to appear in the sender's city and load the reserved
   %% parcels using manager:pick/1.
   Pickups = formatPick(Reservations, Pid),
-  io:format("Pickups complete: ~p ~n", [Pickups]),
+  io:format("~p Pickups complete: ~p ~n", [Pid, Pickups]),
+
+  % These orders are from/to the same place! Drop em!
+  checkDrop(Pid, Loc),
 
   % Will just concern outselves with creating a route from this point and traveling said route,
   % will then address the issue of cargo drops etc...
@@ -67,6 +68,18 @@ start(Pid, Loc) ->
   Pid ! {route, Route, Pid}. % note Route var is a tuple {From, To, Dist}
 
 
+%%%-------------------------------------------------------------------
+%%TODO Make use of first depots rather then going to random towns in search of work...
+%%%-------------------------------------------------------------------
+find_work(Pid, Loc) ->
+  Towns = ets:select(towns, [{{'$1', '$2'}, [], ['$1']}]),
+  TownsIndex = length(Towns),
+  Random = randomIndex(TownsIndex),
+  RandomTown = lists:nth(Random, Towns),
+  Route = simpleRoute(Loc, RandomTown),
+  io:format("Finding work for ~p , going to ~p ~n", [Pid, Route]),
+
+  Pid ! {route, Route, Pid}. % note Route var is a tuple {From, To, Dist}
 
 
 %%%-------------------------------------------------------------------
@@ -81,7 +94,7 @@ notifyDrop([[Ref, _Status, From, To, Kg] | T], Pid) ->
   manager ! {delivered, Pid, Ref},
   %TODO make auditing set in config?
   DeliveryTime = manager:uniqueref(now()) - Ref,
-  ets:insert(delivered, {Ref, delivered, From, To, Kg, DeliveryTime}),
+  ets:insert(delivered, {Ref, delivered, Pid, From, To, Kg, DeliveryTime}),
   ets:delete(Pid, Ref),
   notifyDrop(T, Pid); % dont forget the tail
 notifyDrop([], _Pid) -> na.
@@ -134,7 +147,7 @@ formatRoute(Pid, Loc) ->
   Route = planner:route(Loc, Deliveries),
   nextDestination(Loc, Route).
 
-nextDestination(Loc, [[Loc, Next| _T]]) ->
+nextDestination(Loc, [[Loc, Next| _T] | _Other]) ->
   % now to calculate the distance
   Distance = getDistance(Loc, Next),
   {Loc, Next, Distance}; % from, to, dist
@@ -145,3 +158,19 @@ getDistance(To, From) ->
   Direction1 = ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', To}, {'==', '$2', From}], ['$3']}]),
   Direction2 = ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}, {'==', '$2', To}], ['$3']}]),
   lists:sum(Direction1++Direction2).
+
+
+% for find work method
+simpleRoute(From, To) ->
+  Route = planner:route(From, [To]),
+  nextDestination(From, Route).
+
+% Look away, massive hack as random:uniform returns same across all pids
+% you heard me, not so random... http://erlang.org/pipermail/erlang-questions/2010-September/053193.html
+randomIndex(TownsIndex) ->
+  {_A, _B, C} = now(),
+  N = C rem TownsIndex,
+  if
+    N == 0 -> randomIndex(TownsIndex);
+    N /= 0 -> N % , io:format("MyRand = ~p ~n ", [N])
+  end.

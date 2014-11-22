@@ -18,7 +18,7 @@ Compile everything:
     
 Kick everything off:
 
-> planner:start_link(), planner:start_orders(), observer:start(), :start_vehicles().
+> planner:start_link(), planner:start_orders(), observer:start(), planner:start_vehicles().
 
 
 playing with single vehicle pid data

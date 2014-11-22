@@ -37,16 +37,28 @@ go(Pid, Loc) ->
 atlocation(Pid, Loc) ->
   io:format("Vehicle : ~p , at location: ~p~n", [Pid, Loc]),
   orchestration:start(Pid, Loc),
+
+  % useful for debugging msgbox
+  % process_info(whereis(van1), messages).
   receive
     {route, {From, To, Dist}, Pid} ->
       intransit({Pid, From, To, Dist});
+    {route, finished, Pid} ->
+      waiting(Pid, Loc);
     stop -> exit(stopped)
   end.
 
 intransit({Pid, From, To, Dist}) ->
   io:format("Vehicle  ~p , in transit ~p~n", [Pid, {From, To, Dist}]),
-  timer:sleep(Dist),
+  timer:sleep(Dist * 10),
   atlocation(Pid, To).
+
+waiting(Pid, Loc) ->
+  orchestration:find_work(Pid, Loc),
+  receive
+    {route, {From, To, Dist}, Pid} ->
+      intransit({Pid, From, To, Dist})
+  end.
 
 %%
 %% van10 , in transit {a,b,5000}
