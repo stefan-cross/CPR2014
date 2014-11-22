@@ -36,9 +36,9 @@ go(Pid, Loc) ->
 
 atlocation(Pid, Loc) ->
   io:format("Vehicle : ~p , at location: ~p~n", [Pid, Loc]),
-  %orchestration:start(Pid, Loc),
+  orchestration:start(Pid, Loc),
   receive
-    {Pid, From, To, Dist} ->
+    {route, {From, To, Dist}, Pid} ->
       intransit({Pid, From, To, Dist});
     stop -> exit(stopped)
   end.

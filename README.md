@@ -16,14 +16,14 @@ Compile everything:
 > c(vehicle), c(testing), c(manager), c(planner), c(client), c(orchestration).
     
     
-Load everything:
+Kick everything off:
 
-> planner:start_link(), manager:start_link(), client:start(10, 0), observer:start().
+> planner:start_link(), planner:start_orders(), observer:start(), :start_vehicles().
 
 
 playing with single vehicle pid data
 > ets:insert(van1, {1416605936537825,reserved,"Kraków",[71,100,97,197,132,115,107],80}).
-
+> orchestrate(van1, "Kraków").
 
 - Input data is structured, can we use meta programming to change behaviour or params depending on the config?
 

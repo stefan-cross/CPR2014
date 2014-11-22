@@ -20,14 +20,22 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, route/2, loop/0]).
+-export([start_link/0, route/2, start_orders/0, start_vehicles/0, loop/0]).
 
+%TODO seperate all the startups out into a full init script as everything needs to be started in an order... and this isnt the place for it
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
   {ok, ?MODULE},
   createtables(),
   import(file:consult("../file.conf.csv")),
   createDigraph(),
+  manager:start_link().
+
+start_orders() ->
+  %% Get some data in!
+  client:start(100, 0).
+
+start_vehicles() ->
   createVehicles(truck),
   createVehicles(van).
 

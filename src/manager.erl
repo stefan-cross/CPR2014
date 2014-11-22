@@ -15,7 +15,7 @@
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
   {ok, ?MODULE},
-  ets:new(manager, [set, named_table]).
+  ets:new(manager, [duplicate_bag, named_table, public]).
 
 
 uniqueref({A, B, C}) ->
@@ -25,7 +25,7 @@ uniqueref({A, B, C}) ->
 send(From, To, Kg) ->
   Ref = uniqueref(now()),
   ets:insert(manager, {Ref, waiting, From, To, Kg}),
-  io:format("Order sent: ~p ~p ~p ~p ~n", [Ref, From, To, Kg]),
+  %io:format("Order sent: ~p ~p ~p ~p ~n", [Ref, From, To, Kg]),
   {ok, Ref}.
 
 % Assuming deliveries are potentially parcels in transit,
@@ -214,7 +214,7 @@ lookup(Ref) ->
 loop() ->
   receive
     {delivered, Pid, Ref} ->
-      io:format("Manager update, package delivered by ~p! Ref: ~p~n", [Pid, Ref]),
+      io:format("** MANAGER UPDATE ** Package delivered by ~p Ref: ~p~n", [Pid, Ref]),
       loop();
     exit ->
       io:format("Exiting"),

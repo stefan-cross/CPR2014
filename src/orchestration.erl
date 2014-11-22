@@ -33,8 +33,10 @@
 %%%-------------------------------------------------------------------
 start(Pid, Loc) ->
 
-  % ** Precurser, see if theres anything to drop before we start anything else,
-  % ** this is free up potential capacity as well!
+  %%%% Precurser, see if theres anything to drop before we start anything else,
+  %%%% this frees up potential capacity as well!
+  %TODO only potential problem is that we can enter from and to as same location and they get carted around...
+  %TODO
   Drop = checkDrop(Pid, Loc),
   io:format("~p dropping : ~p ~n", [Pid, Drop]),
 
@@ -50,17 +52,25 @@ start(Pid, Loc) ->
   %% 2. Reserve space for a set of parcel being picked up from one city to another,
   %% ensuring no other truck picks them up using manger:reserve/3.
   %TODO make reservations ahead of arrival, for now only when in location
+  %TODO also, look like a vehicle isnt picking up full capacity, but it does id all potential deliveries above...
   Reservations = formatReserve(Loc, Deliveries, Capacity, Pid), % hardcode capacity for now
   io:format("Reservations complete: ~p ~n", [Reservations]),
 
   %% 3. The selected vehicle needs to appear in the sender's city and load the reserved
   %% parcels using manager:pick/1.
   Pickups = formatPick(Reservations, Pid),
-  io:format("Pickups complete: ~p ~n", [Pickups]).
+  io:format("Pickups complete: ~p ~n", [Pickups]),
+
+  % Will just concern outselves with creating a route from this point and traveling said route,
+  % will then address the issue of cargo drops etc...
+  Route = formatRoute(Pid, Loc),
+  Pid ! {route, Route, Pid}. % note Route var is a tuple {From, To, Dist}
+
+
 
 
 %%%-------------------------------------------------------------------
-%% Supporting and formatting functions
+%% Supporting and formatting functions, pattern matching heven :-)
 %%%-------------------------------------------------------------------
 
 checkDrop(Pid, Loc) ->
@@ -117,3 +127,21 @@ formatPick([[Ref, _Status, _From, _To, _Weight]|T], Pid) ->
   manager:pick(Ref), formatPick(T, Pid);
 formatPick([], _Pid) -> ok;
 formatPick(ok, _Pid) -> ok.
+
+
+formatRoute(Pid, Loc) ->
+  Deliveries = ets:select(Pid, [{{'$1', '$2', '$3', '$4', '$5'}, [], ['$4']}]),
+  Route = planner:route(Loc, Deliveries),
+  nextDestination(Loc, Route).
+
+nextDestination(Loc, [[Loc, Next| _T]]) ->
+  % now to calculate the distance
+  Distance = getDistance(Loc, Next),
+  {Loc, Next, Distance}; % from, to, dist
+nextDestination(_Loc, []) -> finished.
+
+getDistance(To, From) ->
+  %TODO tidy up, this is have issues if multiple entries in config :-( but then again thats your fault and its 02:00
+  Direction1 = ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', To}, {'==', '$2', From}], ['$3']}]),
+  Direction2 = ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}, {'==', '$2', To}], ['$3']}]),
+  lists:sum(Direction1++Direction2).
