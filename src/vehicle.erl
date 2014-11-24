@@ -37,7 +37,6 @@ go(Pid, Loc) ->
 atlocation(Pid, Loc) ->
   io:format("Vehicle : ~p , at location: ~p~n", [Pid, Loc]),
   orchestration:start(Pid, Loc),
-
   % useful for debugging msgbox
   % process_info(whereis(van1), messages).
   receive
@@ -54,10 +53,12 @@ intransit({Pid, From, To, Dist}) ->
   atlocation(Pid, To).
 
 waiting(Pid, Loc) ->
-  orchestration:find_work(Pid, Loc),
+  orchestration:goto_random_town(Pid, Loc),
   receive
     {route, {From, To, Dist}, Pid} ->
-      intransit({Pid, From, To, Dist})
+      intransit({Pid, From, To, Dist});
+    {route, finished, Pid} ->
+      orchestration:goto_random_town(Pid, Loc)
   end.
 
 %%

@@ -28,9 +28,13 @@ start(Num, Delay) when Num /= 0 ->
   % remove town1 from list so we dont have order to and from same place, but lists:delete(Town1, Towns) occationally returns and empty list! errors
   Town2 = lists:nth(random:uniform((TownsIndex -1) +1) , Towns), % allowing potentiall same to and from!
 
-  manager:send(Town1, Town2, Weight),
-  timer:sleep(Delay),
-
-  start(Num - 1, Delay);
+  % Sorry but i had no options as list:delete was randomly giving me an empty list
+  if
+    Town1 == Town2 -> start(Num, 0);
+    Town1 /= Town2 ->
+      manager:send(Town1, Town2, Weight),
+      timer:sleep(Delay),
+      start(Num - 1, Delay)
+  end;
 
 start(_Num, _Delay) -> ok.

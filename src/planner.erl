@@ -33,7 +33,7 @@ start_link() ->
 
 start_orders() ->
   %% Get some data in!
-  client:start(100, 0).
+  client:start(10000, 0).
 
 start_vehicles() ->
   createVehicles(van),

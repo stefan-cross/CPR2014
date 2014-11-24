@@ -26,7 +26,7 @@
 -author("stefancross").
 
 %% API
--export([start/2, find_work/2]).
+-export([start/2, goto_random_town/2]).
 
 %%%-------------------------------------------------------------------
 %% Policy manager
@@ -36,23 +36,22 @@ start(Pid, Loc) ->
   %%%% Precurser, see if theres anything to drop before we start anything else,
   %%%% this frees up potential capacity as well!
   Drop = checkDrop(Pid, Loc),
-  io:format("~p dropping : ~p ~n", [Pid, Drop]),
 
   VehicleType = getType(atom_to_list(Pid)),
   CurrentLoad = lists:sum(ets:select(Pid, [{{'$1', '$2', '$3', '$4', '$5'}, [], ['$5']}])),
   Capacity = calculateCapacity(VehicleType, CurrentLoad),
-  io:format("~p capacity is: ~p ~n", [Pid, Capacity]),
+  io:format("~p dropping: ~p , capacity is: ~p ~n", [Pid, Drop, Capacity]),
 
   %% 1. Call manager:deliver/1 to get a route assigned.
   Deliveries = manager:deliver(Loc),
-  io:format("~p deliveries available: ~p. ~n", [Pid, Deliveries]),
+  %io:format("~p deliveries available: ~p. ~n", [Pid, Deliveries]),
 
   %% 2. Reserve space for a set of parcel being picked up from one city to another,
   %% ensuring no other truck picks them up using manger:reserve/3.
   %TODO make reservations ahead of arrival, for now only when in location
   %TODO also, look like a vehicle isnt picking up full capacity, but it does id all potential deliveries above...
   Reservations = formatReserve(Loc, Deliveries, Capacity, Pid), % hardcode capacity for now
-  io:format("~p Reservations complete: ~p ~n", [Pid, Reservations]),
+  %io:format("~p Reservations complete: ~p ~n", [Pid, Reservations]),
 
   %% 3. The selected vehicle needs to appear in the sender's city and load the reserved
   %% parcels using manager:pick/1.
@@ -71,15 +70,21 @@ start(Pid, Loc) ->
 %%%-------------------------------------------------------------------
 %%TODO Make use of first depots rather then going to random towns in search of work...
 %%%-------------------------------------------------------------------
-find_work(Pid, Loc) ->
+goto_random_town(Pid, Loc) ->
   Towns = ets:select(towns, [{{'$1', '$2'}, [], ['$1']}]),
   TownsIndex = length(Towns),
   Random = randomIndex(TownsIndex),
   RandomTown = lists:nth(Random, Towns),
-  Route = simpleRoute(Loc, RandomTown),
-  io:format("Finding work for ~p , going to ~p ~n", [Pid, Route]),
 
-  Pid ! {route, Route, Pid}. % note Route var is a tuple {From, To, Dist}
+  % avoid going to same location, lists:delete was causing issues so we have to use the sequential way.
+  if
+    Loc == RandomTown -> goto_random_town(Pid, Loc);
+    Loc /= RandomTown ->
+      Route = simpleRoute(Loc, RandomTown),
+      io:format("Finding work for ~p , going to ~p ~n", [Pid, RandomTown]),
+
+      Pid ! {route, Route, Pid} % note Route var is a tuple {From, To, Dist}
+  end.
 
 
 %%%-------------------------------------------------------------------
