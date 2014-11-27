@@ -17,23 +17,21 @@ start_link() ->
   {ok, ?MODULE},
   ets:new(manager, [duplicate_bag, named_table, public]).
 
-
-uniqueref({A, B, C}) ->
-  (A * 1000000000000) + (B * 1000000) + C.
-
-
 send(From, To, Kg) ->
   Ref = uniqueref(now()),
   ets:insert(manager, {Ref, waiting, From, To, Kg}),
   %io:format("Order sent: ~p ~p ~p ~p ~n", [Ref, From, To, Kg]),
   {ok, Ref}.
 
+uniqueref({A, B, C}) ->
+  (A * 1000000000000) + (B * 1000000) + C.
+
 % Assuming deliveries are potentially parcels in transit,
 deliver(Loc) ->
   % Deliveries, items in transit to Loc ~TODO check logic
-  Deliveries = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', intransit}, {'==', '$4', Loc}], ['$3']}]),
+  Deliveries = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$4', Loc}], ['$3']}]),
   % Pickups, items waiting from Loc
-  Pickups = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', waiting}, {'==', '$3', Loc}], ['$4']}]),
+  Pickups = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$3', Loc}], ['$4']}]),
   Order = Pickups++Deliveries,
   Length = length(Order),
   if
@@ -42,7 +40,6 @@ deliver(Loc) ->
   end.
 
 
-%TODO consider allocation to vehicle, DELETE THEM
 reserve(From, To, Kg) ->
   % Reverse select not quite ordered, but improvement on ets:select which gets oldest first
   Reserved = ets:select_reverse(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', waiting}, {'==', '$3', From}, {'==', '$4', To}], ['$$']}]),
@@ -50,7 +47,6 @@ reserve(From, To, Kg) ->
   updateReserved(WeightedReserve),
   {ok, WeightedReserve}.
 
-%TODO consider allocation to vehicle
 reserve(From, Kg) ->
   % Reverse select not quite ordered, but improvement on ets:select which gets oldest first
   Reserved = ets:select_reverse(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', waiting}, {'==', '$3', From}], ['$$']}]),
@@ -62,28 +58,11 @@ weightedReserve([[Ref, _Status, From, To, Kg] | T], Ac) when Ac >= Kg ->
   [[Ref, reserved, From, To, Kg] | weightedReserve(T, (Ac - Kg))];
 weightedReserve([[_Ref, _Status, _From, _To, _Kg] | _T], _Ac) -> [];
 weightedReserve([], _Ac) -> [].
-updateReserved([[Ref, _Status, From, To, Kg] | T]) ->
+updateReserved([[Ref, _Status, _From, _To, _Kg] | T]) ->
   ets:delete(manager, Ref),
-%%   Now we delete them and handle them in vehicle tabs
-%%   % unfortuantely we cant update bags, only sets,
-%%   ets:insert(manager, {Ref, reserved, From, To, Kg}),
+  % Now we delete them and handle them in vehicle tabs
   updateReserved(T);
 updateReserved([]) -> ok.
-
-%% working!
-%% 92> c(manager).
-%% {ok,manager}
-%% 93> manager:start_link().
-%% In loopmanager
-%% 94> manager:send("A", "B", 10).
-%% {ok,1415965996288405}
-%% 95> manager:send("A", "B", 10).
-%% {ok,1415965996952045}
-%% 96> manager:send("A", "B", 10).
-%% {ok,1415965997607945}
-%% 97> manager:reserve("A", "B", 20).
-%% {ok,[[1415965997607945,reserved,"A","B",10],
-%% [1415965996288405,reserved,"A","B",10]]}
 
 pick(Ref) ->
   Pick = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$1', Ref}], ['$$']}]), % had to remove match on {'==', '$2', reserved},
@@ -102,46 +81,8 @@ drop(Ref) ->
   end.
 
 % Used by pick and drop
-updateManagerByRef([[Ref, _Status, From, To, Kg]], State) ->
-  ets:delete(manager, Ref),
-  % unfortuantely we cant update bags, only sets,
-  ets:insert(manager, {Ref, State, From, To, Kg}),
-  io:format("ETS manager ~p updated ~p ~n", [Ref, State]).
-
-%% 85> manager:send("A", "B", 10).
-%% {ok,1415976283352170}
-%% 86> manager:send("A", "B", 10).
-%% {ok,1415976283944349}
-%% 87> manager:send("A", "B", 10).
-%% {ok,1415976284480379}
-%% 88> manager:send("A", "B", 10).
-%% {ok,1415976285056521}
-%% 89> manager:drop(1415975263454240).
-%% {ok,delivered,1415975263454240}
-%% 90> manager:drop(1415975263454240).
-%% {error,not_reserved,process_instance}
-%% 91> manager:drop(1415975262934475).
-%% {error,not_reserved,process_instance}
-%% 92> manager:drop(1415975264599003).
-%% {ok,delivered,1415975264599003}
-%% 93> manager:reserve("A", "B", 40).
-%% {ok,[[1415976285056521,reserved,"A","B",10],
-%% [1415976283352170,reserved,"A","B",10],
-%% [1415976284480379,reserved,"A","B",10],
-%% [1415975263974289,reserved,"A","B",10]]}
-%% 94> manager:pick("A").
-%% {error,not_reserved,process_instance}
-%% 95> manager:pick(1415976285056521).
-%% {ok,intransit,1415976285056521}
-%% 96> manager:pick(1415976283352170).
-%% {ok,intransit,1415976283352170}
-%% 97> manager:pick([1415976283352170, 1415976283352170]).
-%% {error,not_reserved,process_instance}
-%% 98> manager:drop(1415976283352170).
-%% {ok,delivered,1415976283352170}
-%% 99> manager:drop(1415976285056521).
-%% {ok,delivered,1415976285056521}
-
+updateManagerByRef([[Ref, _Status, _From, _To, _Kg]], _State) ->
+  ets:delete(manager, Ref).
 
 transit(Ref, Loc) ->
   Trans = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', intransit}, {'==', '$1', Ref}], ['$$']}]),
@@ -153,28 +94,7 @@ transit(Ref, Loc) ->
 
 updateTransitState([[Ref, _Status, _From, To, Kg]], Loc) ->
   ets:delete(manager, Ref),
-  % unfortuantely we cant update bags, only sets,
   ets:insert(manager, {Ref, indepot, Loc, To, Kg}).
-
-%% 106> manager:send("A", "B", 10).
-%% {ok,1415977993346737}
-%% 107> manager:send("A", "B", 10).
-%% {ok,1415977993874814}
-%% 108> manager:send("A", "C", 10).
-%% {ok,1415977996858774}
-%% 109> manager:send("A", "D", 10).
-%% {ok,1415977999946719}
-%% 110> manager:reserve("A", "B", 20).
-%% {ok,[[1415977993874814,reserved,"A","B",10],
-%% [1415977992083836,reserved,"A","B",10]]}
-%% 111> manager:pick(1415977993874814).
-%% {ok,intransit,1415977993874814}
-%% 112> manager:transit(1415977993874814, "X").
-%% {ok,indepot,1415977993874814}
-%% 113> manager:transit(1415977996858774, "X").
-%% {error,not_indepot,process_instance}
-%% 114> manager:transit(1415977996858774, "X").
-
 
 cargo(Loc) ->
   Depots = ets:select(depots, [{{'$1', '$2'}, [], ['$2']}]),
@@ -187,36 +107,42 @@ routeCargo(Loc, [H|T]) ->
   ets:insert(cargoroute, {RouteDistance, H}),
   routeCargo(Loc, T);
 routeCargo(_Loc, []) ->
-  % why didnt this work?! ets:select(cargoroute, [{{'$1', '$2'}, ['==', '$1', Val], ['$2']}]).
   KV = ets:lookup(cargoroute, ets:first(cargoroute)),
   formatCargoRoute(KV).
 formatCargoRoute([{_K, V}]) ->
-  % dispose of our temp-cargoroute table used to determine shortest route
+  % dispose of our temp cargoroute table used to determine shortest route
   ets:delete(cargoroute),
   {ok, V}.
 
-%% 147> manager:cargo("Lublin").
-%% {ok,"Kraków"}
-%% 148> manager:cargo("Wrocław").
-%% {ok,[321,243,100,378]}
-%% 149> manager:cargo("Białystok").
-%% {ok,"Warszawa"}
 
-
+%TODO this is going to have to look in pid tables to checkwhere abouts of an item, i foresee issues here... but a design trade off to stick to the enforeced api
 lookup(Ref) ->
   {ok, ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$1', Ref}], ['$$']}]), vehiclePid, ownerPid}.
 
-%%
-%% 160> manager:lookup(1415996772636361).
-%% {ok,[[1415996772636361,waiting,"A","C",12]],
-%% vehiclePid,ownerPid}
-
+% See page 132 Process Design Patterns, A Generic Event Manager Handler
 loop() ->
   receive
+    {Pid, {deliveries, Loc}} ->
+      io:format("Delivery request received ~p ~p ~n", [Pid, Loc]),
+      Pid ! manager:deliver(Loc);
     {delivered, Pid, Ref} ->
       io:format("** MANAGER UPDATE ** Package delivered by ~p Ref: ~p~n", [Pid, Ref]),
       loop();
     exit ->
       io:format("Exiting"),
       ok
+%% TODO sort error
+%%         =ERROR REPORT==== 26-Nov-2014::23:24:27 ===
+%%       Error in process <0.73.0> with exit value: {badarg,[{dispatcher,notifyDrop,2,[{file,"dispatcher.erl"},{line,130}]},{dispatcher,start,2,[{file,"dispatcher.erl"},{line,38}]},{vehicle,atlocation,2,[{file,"vehicle.erl"},{line,34}]}]}
+
+%%   after 5000 ->
+%%     reorder()
   end.
+
+reorder()->
+  Count = ets:select_count(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'/=', '$1', 0}], [true]}]),
+  reorder(Count).
+reorder(Count) when Count =< 0 ->
+  order:place(random:uniform(1000), 0);
+reorder(Count) when Count > 0 ->
+  {orders, Count}.

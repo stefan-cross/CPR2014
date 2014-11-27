@@ -16,58 +16,42 @@
 -author("stefancross").
 
 %% API
--export([start/2, init/2, go/2]).
+-export([start/2, init/2]).
 
 start(Pid, Loc)->
   register(Pid, spawn(?MODULE, init, [Pid, Loc])),
   {pid_created, Pid}.
 
 % Dev stragegy is to have autonomous vehicle Pids holding own ets tables
-% Orchestration class handles IO between veh ets and manager ets
+% Dispatcher class handles IO between veh ets and manager ets
 init(Pid, Loc) ->
   process_flag(trap_exit, true),
-%%   ets:insert(pids, Pid, get(Pid)),
-  ets:new(Pid, [set, named_table, public]), % public for testing purposes and ease of interegation
-  atlocation(Pid, Loc).
-
-%TODO remove, this is a backdoor/shortcut for testing!
-go(Pid, Loc) ->
+  ets:new(Pid, [set, named_table, public]),
   atlocation(Pid, Loc).
 
 atlocation(Pid, Loc) ->
   io:format("Vehicle : ~p , at location: ~p~n", [Pid, Loc]),
-  orchestration:start(Pid, Loc),
-  % useful for debugging msgbox
-  % process_info(whereis(van1), messages).
+  dispatcher:start(Pid, Loc),
+  % useful for debugging msgbox, process_info(whereis(van1), messages).
   receive
     {route, {From, To, Dist}, Pid} ->
       intransit({Pid, From, To, Dist});
     {route, finished, Pid} ->
+      %timer:sleep(5000),
       waiting(Pid, Loc);
     stop -> exit(stopped)
   end.
 
 intransit({Pid, From, To, Dist}) ->
   io:format("Vehicle  ~p , in transit ~p~n", [Pid, {From, To, Dist}]),
-  timer:sleep(Dist * 10),
+  timer:sleep(Dist),
   atlocation(Pid, To).
 
 waiting(Pid, Loc) ->
-  orchestration:goto_random_town(Pid, Loc),
+  dispatcher:goto_random_town(Pid, Loc),
   receive
     {route, {From, To, Dist}, Pid} ->
       intransit({Pid, From, To, Dist});
     {route, finished, Pid} ->
-      orchestration:goto_random_town(Pid, Loc)
+      dispatcher:goto_random_town(Pid, Loc)
   end.
-
-%%
-%% van10 , in transit {a,b,5000}
-%% Vehicle  van1 , in transit {a,b,1000}
-%% Vehicle  van3 , in transit {x,y,500}
-%% {van3,x,y,500}
-%% Vehicle : van3 , at location: y
-%% Vehicle : van1 , at location: b
-%% Vehicle : van10 , at location: b
-%% Vehicle  van10 , in transit {b,c,2000}
-%% Vehicle : van10 , at location: c

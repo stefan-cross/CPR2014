@@ -4,178 +4,98 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 20. Nov 2014 22:15
-%%
-%% 1. Call manager:deliver/1 to get a route assigned.
-%% 2. Reserve space for a set of parcel being picked up from one city to another,
-%% ensuring no other truck picks them up using manger:reserve/3.
-%% 3. The selected vehicle needs to appear in the sender's city and load the reserved
-%% parcels using manager:pick/1.
-%% 4. When in a city, you can decide if you want to pick up other parcels within the
-%% vehicle’s weight allowance using manger:reserve/2 that have not been
-%% reserved or do nothing.
-%% 5. Decide if you want to transport the parcel to the receiver or a cargo station.
-%% 6. If the parcel is in the cargo station, decide if it should be transported to another
-%% cargo station closer to its final destination.
-%% 7. It is enough for a van to reach a city for a parcel to be picked up or delivered.
-%% Use manager:drop/1 to deliver the parcel.
-%% 8. End your round in a cargo station dropping off all remaining parcels you picked
-%% up en route using manager:transit/2. Find your closest cargo station using manager:cargo/1.
+%%% Created : 26. Nov 2014 23:12
 %%%-------------------------------------------------------------------
 -module(orchestration).
 -author("stefancross").
 
 %% API
--export([start/2, goto_random_town/2]).
+-export([start_simulation/0]).
 
-%%%-------------------------------------------------------------------
-%% Policy manager
-%%%-------------------------------------------------------------------
-start(Pid, Loc) ->
-
-  %%%% Precurser, see if theres anything to drop before we start anything else,
-  %%%% this frees up potential capacity as well!
-  Drop = checkDrop(Pid, Loc),
-
-  VehicleType = getType(atom_to_list(Pid)),
-  CurrentLoad = lists:sum(ets:select(Pid, [{{'$1', '$2', '$3', '$4', '$5'}, [], ['$5']}])),
-  Capacity = calculateCapacity(VehicleType, CurrentLoad),
-  io:format("~p dropping: ~p , capacity is: ~p ~n", [Pid, Drop, Capacity]),
-
-  %% 1. Call manager:deliver/1 to get a route assigned.
-  Deliveries = manager:deliver(Loc),
-  %io:format("~p deliveries available: ~p. ~n", [Pid, Deliveries]),
-
-  %% 2. Reserve space for a set of parcel being picked up from one city to another,
-  %% ensuring no other truck picks them up using manger:reserve/3.
-  %TODO make reservations ahead of arrival, for now only when in location
-  %TODO also, look like a vehicle isnt picking up full capacity, but it does id all potential deliveries above...
-  Reservations = formatReserve(Loc, Deliveries, Capacity, Pid), % hardcode capacity for now
-  %io:format("~p Reservations complete: ~p ~n", [Pid, Reservations]),
-
-  %% 3. The selected vehicle needs to appear in the sender's city and load the reserved
-  %% parcels using manager:pick/1.
-  Pickups = formatPick(Reservations, Pid),
-  io:format("~p Pickups complete: ~p ~n", [Pid, Pickups]),
-
-  % These orders are from/to the same place! Drop em!
-  checkDrop(Pid, Loc),
-
-  % Will just concern outselves with creating a route from this point and traveling said route,
-  % will then address the issue of cargo drops etc...
-  Route = formatRoute(Pid, Loc),
-  Pid ! {route, Route, Pid}. % note Route var is a tuple {From, To, Dist}
+start_simulation() ->
+  {ok, ?MODULE},
+  createtables(),
+  import(file:consult("../file.conf.csv")),
+  createDigraph(),
+  manager:start_link(),
+  order:place(10000, 0),
+  start_vehicles().
 
 
-%%%-------------------------------------------------------------------
-%%TODO Make use of first depots rather then going to random towns in search of work...
-%%%-------------------------------------------------------------------
-goto_random_town(Pid, Loc) ->
-  Towns = ets:select(towns, [{{'$1', '$2'}, [], ['$1']}]),
-  TownsIndex = length(Towns),
-  Random = randomIndex(TownsIndex),
-  RandomTown = lists:nth(Random, Towns),
+start_vehicles() ->
+  createVehicles(van),
+  createVehicles(truck).
 
-  % avoid going to same location, lists:delete was causing issues so we have to use the sequential way.
-  if
-    Loc == RandomTown -> goto_random_town(Pid, Loc);
-    Loc /= RandomTown ->
-      Route = simpleRoute(Loc, RandomTown),
-      io:format("Finding work for ~p , going to ~p ~n", [Pid, RandomTown]),
+import({ok,
+  [{towns, Towns},
+    {distances, Distances},
+    {depot, Depots},
+    {truck, Trucks},
+    {van, Vans}
+  ]}) ->
+  inserttowns(Towns),
+  insertdistances(Distances),
+  insertdepots(Depots),
+  insertVehicles(truck, Trucks, 1),
+  insertVehicles(van, Vans, 1),
+  io:format("Config imported. ~n").
 
-      Pid ! {route, Route, Pid} % note Route var is a tuple {From, To, Dist}
-  end.
+%TODO parameterise and reduce seperate functions for locations
+createtables() ->
+  ets:new(towns, [duplicate_bag, named_table]),
+  ets:new(distances, [duplicate_bag, named_table]),
+  ets:new(depots, [duplicate_bag, named_table]),
+  ets:new(truck, [duplicate_bag, named_table]),
+  ets:new(van, [duplicate_bag, named_table]),
+  ets:new(delivered, [set, named_table, public]),
+  ets:new(pids, [duplicate_bag, named_table]).
 
+inserttowns([H|T]) ->
+  ets:insert(towns, H), inserttowns(T);
+inserttowns([]) -> ok.
 
-%%%-------------------------------------------------------------------
-%% Supporting and formatting functions, pattern matching heven :-)
-%%%-------------------------------------------------------------------
+insertdistances([H|T]) ->
+  ets:insert(distances, H), insertdistances(T);
+insertdistances([]) -> ok.
 
-checkDrop(Pid, Loc) ->
-  Drop = ets:select(Pid, [{{'$1', '$2', '$3', '$4', '$5'},[{'==','$4', Loc}],['$$']}]),
-  notifyDrop(Drop, Pid).
-notifyDrop([[Ref, _Status, From, To, Kg] | T], Pid) ->
-  % notify the manager
-  manager ! {delivered, Pid, Ref},
-  %TODO make auditing set in config?
-  DeliveryTime = manager:uniqueref(now()) - Ref,
-  ets:insert(delivered, {Ref, delivered, Pid, From, To, Kg, DeliveryTime}),
-  ets:delete(Pid, Ref),
-  notifyDrop(T, Pid); % dont forget the tail
-notifyDrop([], _Pid) -> na.
+insertdepots([H|T]) ->
+  ets:insert(depots, {depot, H}), insertdepots(T);
+insertdepots([]) -> ok.
 
-% as our Pids start with vehicle type we can get type by inspecting the starting letter..
-% we can use this to determine capacity
-getType([H|_]) ->
-  %TODO fix
-  % this is ugly but the followoing is an illegal guard expression
-  % "van" =:= string:sub_string(atom_to_list(Pid), 1, 3) -> van
-  if
-    H == 118 -> van;
-    H == 116 -> truck % wtf.. 116 == lists:nth(1, atom_to_list(t)).
-  end.
-
-%TODO allow for a config to set loads dynamically?
-calculateCapacity(van, Load) ->
-  1000 - Load;
-calculateCapacity(truck, Load) ->
-  20000 - Load.
-
-% err formatting, not pretty, but as per API spec
-% TODO this additional formatting function to place Pid on orders
-formatReserve(Loc, {ok, List}, Weight, Pid) -> % how to maximise weight feature
-  formatReserve(Loc, List, Weight, Pid);
-formatReserve(Loc, [H|_T], Weight, Pid) ->
-  Reserved = manager:reserve(Loc, H, Weight),
-  processReserved(Reserved, Pid);
-  %reserve(Loc, T, Weight); % igonore recusrsion for now, lets get it working with one
-formatReserve(_Loc, [], _Weight, _Pid) -> ok;
-formatReserve(_Loc, {error, _}, _Weight, _Pid) -> ok.
-
-% Takes the output from the manager reserve and inserts into this Pids ets
-processReserved({ok, List}, Pid) -> processReserved(List, Pid);
-processReserved([[Ref, _Status, From, To, Kg]|T], Pid) ->
-  ets:insert(Pid, {Ref, reserved, From, To, Kg}),
-  processReserved(T, Pid);
-processReserved([], _Pid) -> ok.
-
-%
-formatPick({ok, List}, Pid) -> formatPick(List, Pid);
-formatPick([[Ref, _Status, _From, _To, _Weight]|T], Pid) ->
-  manager:pick(Ref), formatPick(T, Pid);
-formatPick([], _Pid) -> ok;
-formatPick(ok, _Pid) -> ok.
+insertVehicles(Vehicle, [H|T], Acc) ->
+  ets:insert(Vehicle, {Acc, H}), insertVehicles(Vehicle, T, Acc + 1);
+insertVehicles(_Vehicle, [], _Acc) -> ok.
 
 
-formatRoute(Pid, Loc) ->
-  Deliveries = ets:select(Pid, [{{'$1', '$2', '$3', '$4', '$5'}, [], ['$4']}]),
-  Route = planner:route(Loc, Deliveries),
-  nextDestination(Loc, Route).
+createDigraph() ->
+  Graph = digraph:new(),
+  ets:new(graph, [set, named_table]),
+  ets:insert(graph, Graph),
+  io:format("Digraph and ETS graph ref created as ~p.~n", [ets:lookup(graph, digraph)]),
+  createDigraphVerticies(Graph, ets:match(towns, '$1')).
 
-nextDestination(Loc, [[Loc, Next| _T] | _Other]) ->
-  % now to calculate the distance
-  Distance = getDistance(Loc, Next),
-  {Loc, Next, Distance}; % from, to, dist
-nextDestination(_Loc, []) -> finished.
+createDigraphVerticies(Graph, [[{Town, _D}]|Tail]) ->
+  digraph:add_vertex(Graph, Town), createDigraphVerticies(Graph, Tail);
+createDigraphVerticies(Graph, []) ->
+  io:format("Verticies have been created. ~n"),
+  createDigraphEdges(Graph).
 
-getDistance(To, From) ->
-  %TODO tidy up, this is have issues if multiple entries in config :-( but then again thats your fault and its 02:00
-  Direction1 = ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', To}, {'==', '$2', From}], ['$3']}]),
-  Direction2 = ets:select(distances, [{{'$1', '$2', '$3'}, [{'==', '$1', From}, {'==', '$2', To}], ['$3']}]),
-  lists:sum(Direction1++Direction2).
+createDigraphEdges(Graph) ->
+  Distances = ets:select(distances, [{{'$1', '$2', '$3'}, [], ['$$']}]),
+  createDigraphEdges(Graph, Distances).
+createDigraphEdges(Graph, [[City1, City2, _Dist]|T]) ->
+  digraph:add_edge(Graph, City1, City2),
+  % Make our edges bidirectional
+  digraph:add_edge(Graph, City2, City1),
+  createDigraphEdges(Graph, T);
+createDigraphEdges(_Graph, []) ->
+  io:format("Edges have been created. ~n").
 
-
-% for find work method
-simpleRoute(From, To) ->
-  Route = planner:route(From, [To]),
-  nextDestination(From, Route).
-
-% Look away, massive hack as random:uniform returns same across all pids
-% you heard me, not so random... http://erlang.org/pipermail/erlang-questions/2010-September/053193.html
-randomIndex(TownsIndex) ->
-  {_A, _B, C} = now(),
-  N = C rem TownsIndex,
-  if
-    N == 0 -> randomIndex(TownsIndex);
-    N /= 0 -> N % , io:format("MyRand = ~p ~n ", [N])
-  end.
+createVehicles(Vehicle) ->
+  First = ets:first(Vehicle),
+  createVehicles(ets:lookup(Vehicle, First), Vehicle).
+createVehicles([{N, Loc}], Vehicle) ->
+  Name = list_to_atom(atom_to_list(Vehicle) ++ integer_to_list(N)),
+  vehicle:start(Name, Loc),
+  createVehicles(ets:lookup(Vehicle, ets:next(Vehicle, N)), Vehicle);
+createVehicles([], Vehicle) -> io:format("All ~ps registered. ~n", [Vehicle]).
