@@ -31,7 +31,7 @@ init(Pid, Loc) ->
 
 atlocation(Pid, Loc) ->
   io:format("Vehicle : ~p , at location: ~p~n", [Pid, Loc]),
-  dispatcher:start(Pid, Loc),
+    dispatcher:start(Pid, Loc),
   % useful for debugging msgbox, process_info(whereis(van1), messages).
   receive
     {route, {From, To, Dist}, Pid} ->

@@ -135,6 +135,19 @@ notifyDrop([[Ref, _Status, From, To, Kg] | T], Pid) ->
   notifyDrop(T, Pid); % dont forget the tail
 notifyDrop([], _Pid) -> na.
 
+cargoDrop(Pid, Loc) ->
+  Depots = ets:select(Pid, [{{'$1', '$2'},[],['$2']}]),
+  Result = lists:member(Loc, Depots),
+
+  if
+    Result == true ->
+      {Ref, _Status, From, To, Kg} = ets:select(Pid, [{{'$1', '$2', '$3', '$4', '$5'},[{'==','$4', Loc}],['$$']}]),
+      ets:insert(Pid, {Ref, indepot, Loc, To, Kg});
+    Result /= true -> no_depot_drop
+  end.
+
+
+
 % as our Pids start with vehicle type we can get type by inspecting the starting letter..
 % we can use this to determine capacity
 getType([H|_]) ->
@@ -180,6 +193,7 @@ formatPick(ok, _Pid) -> ok.
 formatRoute(Pid, Loc) ->
   Deliveries = ets:select(Pid, [{{'$1', '$2', '$3', '$4', '$5'}, [], ['$4']}]),
   Route = planner:route(Loc, Deliveries),
+  %Route = planner ! {route,{Loc, Deliveries}, Pid},
   nextDestination(Loc, Route).
 
 nextDestination(Loc, [[Loc, Next| _T] | _Other]) ->
