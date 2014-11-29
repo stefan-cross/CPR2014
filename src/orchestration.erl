@@ -10,7 +10,7 @@
 -author("stefancross").
 
 %% API
--export([start_simulation/0]).
+-export([start_simulation/0, start_vehicles/0]).
 
 start_simulation() ->
   {ok, ?MODULE},
@@ -19,8 +19,8 @@ start_simulation() ->
   createDigraph(),
   manager:start_link(),
   order:place(10000, 0),
+  vehicle_sup:start_link(),
   start_vehicles().
-
 
 start_vehicles() ->
   createVehicles(van),
@@ -47,8 +47,7 @@ createtables() ->
   ets:new(depots, [duplicate_bag, named_table]),
   ets:new(truck, [duplicate_bag, named_table]),
   ets:new(van, [duplicate_bag, named_table]),
-  ets:new(delivered, [set, named_table, public]),
-  ets:new(pids, [duplicate_bag, named_table]).
+  ets:new(delivered, [set, named_table, public]).
 
 inserttowns([H|T]) ->
   ets:insert(towns, H), inserttowns(T);
@@ -96,6 +95,7 @@ createVehicles(Vehicle) ->
   createVehicles(ets:lookup(Vehicle, First), Vehicle).
 createVehicles([{N, Loc}], Vehicle) ->
   Name = list_to_atom(atom_to_list(Vehicle) ++ integer_to_list(N)),
-  vehicle:start(Name, Loc),
+  %vehicle:start(Name, Loc), %TODO start via supervisior
+  vehicle_sup:add_vehicle(Name, {Loc, 0}),
   createVehicles(ets:lookup(Vehicle, ets:next(Vehicle, N)), Vehicle);
 createVehicles([], Vehicle) -> io:format("All ~ps registered. ~n", [Vehicle]).

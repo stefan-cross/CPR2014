@@ -15,7 +15,7 @@
 start_link() ->
   register(?MODULE, spawn_link(?MODULE, loop, [])),
   {ok, ?MODULE},
-  ets:new(manager, [duplicate_bag, named_table, public]).
+  ets:new(manager, [duplicate_bag, named_table, public]). %TODO make ordered_set?
 
 send(From, To, Kg) ->
   Ref = uniqueref(now()),
