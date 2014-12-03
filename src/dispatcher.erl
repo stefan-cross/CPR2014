@@ -33,6 +33,7 @@
 %%%-------------------------------------------------------------------
 start(Pid, Loc) ->
 
+  updateLocation(Pid, Loc),
   %%%% Precurser, see if theres anything to drop before we start anything else,
   %%%% this frees up potential capacity as well!
   Drop = checkDrop(Pid, Loc),
@@ -84,12 +85,14 @@ start(Pid, Loc) ->
 %% Polcies for finding work...
 %%%-------------------------------------------------------------------
 
+updateLocation(Pid, Loc) ->
+  ets:update_element(vehicle_sup, Pid, {2, Loc}).
+
 goto_depot(Pid, Loc) ->
   Depots = ets:select(depot, [{{'$1', '$2'}, [], ['$2']}]),
   DepotsIndex = length(Depots),
   Random = randomIndex(DepotsIndex),
   RandomDepot = list:nth(Random, Depots),
-
   if
     Loc == RandomDepot -> goto_depot(Pid, Loc); % roll again
     Loc /= Random ->

@@ -13,12 +13,12 @@ Quick start commands:
 
 Compile everything:
 
-> c(vehicle), c(testing), c(manager), c(planner), c(client), c(orchestration).
+> c(vehicle), c(testing), c(manager), c(planner), c(client), c(orchestration), c(dispatcher) ,c(vehicle_sup).
     
     
 Kick everything off:
 
-> planner:start_link(), planner:start_orders(), observer:start(), planner:start_vehicles().
+> orchestration:start_simulation().
 
 
 playing with single vehicle pid data

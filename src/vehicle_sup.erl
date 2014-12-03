@@ -15,19 +15,18 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, stop/1, add_vehicle/2, remove_vehicle/2]).
+-export([start_link/0, init/1, stop/1, add_vehicle/2, remove_vehicle/2]).
 
 
 %% Starts a new empty vehicle supervisor that is linked to the calling process.
 start_link() ->
-  register(?MODULE, spawn(fun() -> init()end)),
-  io:format("Supervisor, ~p started.", [?MODULE]),
-  {ok, ?MODULE}.
+  proc_lib:start_link(?MODULE, init, [self()]).
 
-init() ->
-  %process_flag(trap_exit, true),
+init(Pid) ->
+  % Could use pg2 to store Pids as intended
   ets:new(?MODULE, [set, named_table, public]),
-  io:format("Supervisor ets tab created."),
+  io:format("Supervisor ets tab created. ~n"),
+  proc_lib:init_ack({ok, Pid}),
   loop().
 
 %% Stop the phone supervisor and terminate all the linked vehicles.
