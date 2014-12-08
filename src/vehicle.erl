@@ -19,19 +19,18 @@
 -export([start/2, init/2]).
 
 start(Pid, Loc)->
-  register(Pid, spawn(?MODULE, init, [Pid, Loc])),
-  {pid_created, Pid}.
+  {ok, spawn_link(?MODULE, init, [Pid, Loc])}.
 
 % Dev stragegy is to have autonomous vehicle Pids holding own ets tables
 % Dispatcher class handles IO between veh ets and manager ets
 init(Pid, Loc) ->
-  process_flag(trap_exit, true),
-  ets:new(Pid, [set, named_table, public]),
+  register(Pid, self()),
+  ets:new(Pid, [set, named_table, public, {heir, whereis(manager), []}]),
   atlocation(Pid, Loc).
 
 atlocation(Pid, Loc) ->
   io:format("Vehicle : ~p , at location: ~p~n", [Pid, Loc]),
-    dispatcher:start(Pid, Loc),
+  dispatcher:start(Pid, Loc),
   % useful for debugging msgbox, process_info(whereis(van1), messages).
   receive
     {route, {From, To, Dist}, Pid} ->
@@ -39,7 +38,7 @@ atlocation(Pid, Loc) ->
     {route, finished, Pid} ->
       %timer:sleep(5000),
       waiting(Pid, Loc);
-    stop -> exit(stopped)
+    stop -> exit(graceful)
   end.
 
 intransit({Pid, From, To, Dist}) ->
@@ -53,5 +52,7 @@ waiting(Pid, Loc) ->
     {route, {From, To, Dist}, Pid} ->
       intransit({Pid, From, To, Dist});
     {route, finished, Pid} ->
-      dispatcher:goto_random_town(Pid, Loc)
+      dispatcher:goto_random_town(Pid, Loc);
+    stop -> exit(graceful)
   end.
+

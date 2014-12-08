@@ -18,9 +18,9 @@ start_simulation() ->
   import(file:consult("../file.conf.csv")),
   createDigraph(),
   manager:start_link(),
-  top_sup:start_link(),
   planner:start_link(),
-  order:place(100000, 0),
+  order:place(10000, 0),
+  vehicle_sup:start_link(),
   start_vehicles().
 
 %%Top Sup should take care of this now... manager:start_link(), vehicle_sup:start_link(), planner:start_link()

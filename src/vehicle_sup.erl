@@ -12,56 +12,58 @@
 %%%
 %%%-------------------------------------------------------------------
 -module(vehicle_sup).
--author("stefancross").
 
-%% API
--export([start_link/0, init/1, stop/1, add_vehicle/2, remove_vehicle/2]).
+-export([start_link/0, init/0, add_vehicle/2, remove_vehicle/2]).
 
 
-%% Starts a new empty vehicle supervisor that is linked to the calling process.
 start_link() ->
-  proc_lib:start_link(?MODULE, init, [self()]).
+  register(?MODULE, spawn(?MODULE, init, [])).
 
-init(Pid) ->
-  % Could use pg2 to store Pids as intended
+init() ->
+  process_flag(trap_exit, true),
   ets:new(?MODULE, [set, named_table, public]),
-  io:format("Supervisor ets tab created. ~n"),
-  proc_lib:init_ack({ok, Pid}),
   loop().
 
-%% Stop the phone supervisor and terminate all the linked vehicles.
-stop(SupPid) ->
-  SupPid ! stop.
-
-%% Start a new vehicle process and adds it to the supervision tree.
-add_vehicle(SupPid, {Loc, _Kg}) ->
-  % ETS tab used instead of list
-  ets:insert(?MODULE, {SupPid, Loc}),
-  vehicle:start(SupPid, Loc),
-  io:format("Vehicle ~p  inserted to ~p table", [SupPid, ?MODULE]),
-  {ok, SupPid}.
-
+add_vehicle(Name, {Loc, _Kg}) ->
+  ?MODULE ! {add_vehicle, Name, Loc}.
 
 %% Remove the vehicle from the supervision tree.
-remove_vehicle(SupPid, Id) ->
-  %TODO Add the contents of the orders back to the manager table
-  Packages = ets:select(SupPid, [{{'$1', '$2', '$3', '$4', '$5'}, [], ['$$']}]),
-  ets:delete(SupPid),
-  returnPackages(Packages).
+remove_vehicle(SupPid, _Id) ->
+  ?MODULE ! {remove_vehicle, SupPid}.
 
-%TODO currently orders will start process all over again, instead insert where from is current loc?
-returnPackages([[Ref, _Status, From, To, Kg]|T]) ->
-  ets:insert(manager,[Ref, returned, From, To, Kg]),
-  returnPackages(T);
-returnPackages([]) -> {ok, all_packages_returned}.
+returnPackages(Pid) ->
+  Packages = ets:select(Pid, [{{'$1', '$2', '$3', '$4', '$5'}, [], ['$$']}]),
+%%   TODO work out why this fails..
+%%   [Loc|_T] = ets:select(vehicle_sup, [{{'$1', '$2', '$3'}, [{'==', '$1', Pid}], ['$3']}]),  % I have no idea why this isnt working!?
+  returnPackages(Packages, "Warszawa"). % Hardcoded return to "Warszawa"
+returnPackages([[Ref, _Status, _From, To, Kg]|T], Loc) ->
+  ets:insert(manager,{Ref, returned, Loc, To, Kg}),
+  returnPackages(T, Loc);
+returnPackages([], _Loc) -> {ok, all_packages_returned}.
+
 
 
 loop() ->
+  io:format("Supervisor Looping ~n"),
   receive
-    {'EXIT', Pid, _Reason} ->
-      remove_vehicle(Pid, id),
-      add_vehicle(Pid, 0),
+    {'EXIT', Pid, graceful} ->
+      io:format("Supervisor process ~p exiting gracefully. ~n", [Pid]),
+      loop();
+    {'EXIT', Pid, Reason} ->
+      io:format("Supervisor - ERROR: ~p, ~p ~n", [Pid, Reason]),
+      [[Name, Id, Loc]] = ets:select(?MODULE, [{{'$1', '$2', '$3'}, [{'==', '$2', pid_to_list(Pid)}], [['$1', '$2', '$3']]}]),
+      ets:delete(?MODULE, Name),
+      io:format("RETURNING PACKAGES: ~p ~n", [Name]),
+      returnPackages(Name),
+      ets:delete(Name),
+      add_vehicle(Name, {Loc, Id}),
+      loop();
+    {add_vehicle, Name, Loc} ->
+      {ok, Pid} = vehicle:start(Name, Loc),
+      ets:insert(?MODULE, {Name, pid_to_list(Pid), Loc}),
+      loop();
+    {remove_vehicle, Name} ->
+      ets:delete(?MODULE, Name),
+      Name ! stop,
       loop()
   end.
-
-

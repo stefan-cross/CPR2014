@@ -86,7 +86,7 @@ start(Pid, Loc) ->
 %%%-------------------------------------------------------------------
 
 updateLocation(Pid, Loc) ->
-  ets:update_element(vehicle_sup, Pid, {2, Loc}).
+  ets:update_element(vehicle_sup, Pid, {3, Loc}).
 
 goto_depot(Pid, Loc) ->
   Depots = ets:select(depot, [{{'$1', '$2'}, [], ['$2']}]),
@@ -139,7 +139,7 @@ notifyDrop([[Ref, _Status, From, To, Kg] | T], Pid) ->
 notifyDrop([], _Pid) -> na.
 
 cargoDrop(Pid, Loc) ->
-  Depots = ets:select(Pid, [{{'$1', '$2'},[],['$2']}]),
+  Depots = ets:select(cargo, [{{'$1', '$2'},[],['$2']}]),
   Result = lists:member(Loc, Depots),
 
   if
