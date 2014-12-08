@@ -43,14 +43,14 @@ deliver(Loc) ->
 
 reserve(From, To, Kg) ->
   % Reverse select not quite ordered, but improvement on ets:select which gets oldest first
-  Reserved = ets:select_reverse(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', waiting}, {'==', '$3', From}, {'==', '$4', To}], ['$$']}]),
+  Reserved = ets:select_reverse(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$3', From}, {'==', '$4', To}], ['$$']}]),
   WeightedReserve = weightedReserve(Reserved, Kg),
   updateReserved(WeightedReserve),
   {ok, WeightedReserve}.
 
 reserve(From, Kg) ->
   % Reverse select not quite ordered, but improvement on ets:select which gets oldest first
-  Reserved = ets:select_reverse(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$2', waiting}, {'==', '$3', From}], ['$$']}]),
+  Reserved = ets:select_reverse(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$3', From}], ['$$']}]),
   WeightedReserve = weightedReserve(Reserved, Kg),
   updateReserved(WeightedReserve),
   {ok, WeightedReserve}.
