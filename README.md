@@ -22,7 +22,7 @@ Kick everything off:
 
 
 For testing the vehicle_sup:
-> c(vehicle), c(testing), c(manager), c(planner), c(client), c(orchestration), c(dispatcher) ,c(vehicle_sup), observer:start(), orchestration:start_simulation().
+> c(vehicle), c(testing), c(manager), c(planner), c(client), c(orchestration), c(dispatcher) ,c(vehicle_sup), c(top_sup), observer:start(), orchestration:start_simulation().
 > exit(whereis(van1), kill).
 
 

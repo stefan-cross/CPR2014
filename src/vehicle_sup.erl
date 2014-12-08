@@ -17,9 +17,10 @@
 
 
 start_link() ->
-  register(?MODULE, spawn(?MODULE, init, [])).
+  {ok, spawn_link(?MODULE, init, [])}.
 
 init() ->
+  register(?MODULE, self()),
   process_flag(trap_exit, true),
   ets:new(?MODULE, [set, named_table, public]),
   loop().
@@ -54,10 +55,10 @@ returnPackages([], _Loc) -> {ok, all_packages_returned}.
 
 
 loop() ->
-  io:format("Supervisor Looping ~n"),
+%%   io:format("Supervisor Looping ~n"),
   receive
     {'EXIT', Pid, graceful} ->
-      io:format("Supervisor process ~p exiting gracefully. ~n", [Pid]),
+      io:format("Supervised process ~p exiting gracefully. ~n", [Pid]),
       loop();
     {'EXIT', Pid, Reason} ->
       io:format("Supervisor - ERROR: ~p, ~p ~n", [Pid, Reason]),

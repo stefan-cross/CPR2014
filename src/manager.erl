@@ -10,13 +10,16 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, deliver/1, reserve/3, reserve/2, pick/1, drop/1, uniqueref/1, transit/2, cargo/1, lookup/1, loop/0, send/3, reorder/0]).
+-export([start_link/0, init/0, deliver/1, reserve/3, reserve/2, pick/1, drop/1, uniqueref/1, transit/2, cargo/1, lookup/1, loop/0, send/3, reorder/0]).
 
 start_link() ->
-  register(?MODULE, spawn_link(?MODULE, loop, [])),
-  {ok, ?MODULE},
+  {ok, spawn_link(?MODULE, init, [])}.
+
+init() ->
+  register(?MODULE, self()),
   io:format("Manager started ~n"),
-  ets:new(manager, [duplicate_bag, named_table, public]). %TODO make ordered_set?
+  ets:new(manager, [duplicate_bag, named_table, public]),
+  loop().
 
 send(From, To, Kg) ->
   Ref = uniqueref(now()),

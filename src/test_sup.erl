@@ -18,6 +18,16 @@
 
 
 start_link() ->
+  proc_lib:start_link(?MODULE, init, [self()]).
+
+
+init(Pid) ->
+  {ok, Pid} = Pid,
+  register(?MODULE, Pid),
+  proc_lib:init_ack(Pid, {ok, self()}),
+  loop().
+
+start_link() ->
   ChildSpecList = [],
   spawn_link(?MODULE, init, [ChildSpecList]),
   register(?MODULE, self()),

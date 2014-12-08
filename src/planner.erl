@@ -20,11 +20,14 @@
 -author("stefancross").
 
 %% API
--export([start_link/0, route/2, loop/0]).
+-export([start_link/0, init/0, route/2, loop/0]).
 
 start_link() ->
-  register(?MODULE, spawn(?MODULE, loop, [])),
-  {ok, ?MODULE}.
+  {ok, spawn_link(?MODULE, init, [])}.
+
+init() ->
+  register(?MODULE, self()),
+  loop().
 
 % It was decided to return nested loop of From To so that distance might be able to be included at a later date
 % and allow for optimisated routing on link cost rather then hop count, however there was not enough time for this
