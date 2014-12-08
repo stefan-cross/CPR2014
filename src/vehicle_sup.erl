@@ -13,7 +13,7 @@
 %%%-------------------------------------------------------------------
 -module(vehicle_sup).
 
--export([start_link/0, init/0, add_vehicle/2, remove_vehicle/2]).
+-export([start_link/0, init/0, stop/1, add_vehicle/2, remove_vehicle/2]).
 
 
 start_link() ->
@@ -23,6 +23,16 @@ init() ->
   process_flag(trap_exit, true),
   ets:new(?MODULE, [set, named_table, public]),
   loop().
+
+stop(_SupPid) ->
+  Vehicles = ets:select(?MODULE, [{{'$1', '$2', '$3'}, [], [['$1']]}]),
+  stopVehicles(Vehicles),
+  timer:sleep(1000),
+  exit(self(), normal).
+
+stopVehicles([[H|_]|T]) ->
+  H ! stop, stopVehicles(T);
+stopVehicles([]) -> ok.
 
 add_vehicle(Name, {Loc, _Kg}) ->
   ?MODULE ! {add_vehicle, Name, Loc}.
@@ -53,7 +63,6 @@ loop() ->
       io:format("Supervisor - ERROR: ~p, ~p ~n", [Pid, Reason]),
       [[Name, Id, Loc]] = ets:select(?MODULE, [{{'$1', '$2', '$3'}, [{'==', '$2', pid_to_list(Pid)}], [['$1', '$2', '$3']]}]),
       ets:delete(?MODULE, Name),
-      io:format("RETURNING PACKAGES: ~p ~n", [Name]),
       returnPackages(Name),
       ets:delete(Name),
       add_vehicle(Name, {Loc, Id}),

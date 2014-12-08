@@ -28,13 +28,10 @@ init([])->
   Shutdown = 2000,
   Type = worker,
 
-  Manager = {manager, {manager, start_link, []},
-    Restart, Shutdown, Type, [manager]},
-
   VehicleChild = {vehicle_sup, {vehicle_sup, start_link, []},
             Restart, Shutdown, Type, [vehicle_sup]},
 
-  {ok, {SupFlags, [Manager, VehicleChild]}}.
+  {ok, {SupFlags, [VehicleChild]}}.
 
 %%
 %% See Page 17 of Supervisor example slides

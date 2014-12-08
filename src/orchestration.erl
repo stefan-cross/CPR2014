@@ -19,7 +19,7 @@ start_simulation() ->
   createDigraph(),
   manager:start_link(),
   planner:start_link(),
-  order:place(10000, 0),
+  order:place(100000, 0),
   vehicle_sup:start_link(),
   start_vehicles().
 
