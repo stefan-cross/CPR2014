@@ -5,12 +5,20 @@
 %%%
 %%% @end
 %%% Created : 10. Nov 2014 21:18
+%%
+%% 3.2 Practical Part 2: Implementing the Parcel Manager
+%%
+%% The parcel manager keeps track of parcels and provides vans and trucks
+%% with locations that require pickups. It can access the journey planner’s
+%% tables and retrieve information on cities and routes as required.
+%%
 %%%-------------------------------------------------------------------
 -module(manager).
 -author("stefancross").
 
 %% API
--export([start_link/0, init/0, deliver/1, reserve/3, reserve/2, pick/1, drop/1, uniqueref/1, transit/2, cargo/1, lookup/1, loop/0, send/3, reorder/0]).
+-export([start_link/0, init/0, deliver/1, reserve/3, reserve/2, pick/1]).
+-export([drop/1, uniqueref/1, transit/2, cargo/1, lookup/1, loop/0, send/3]).
 
 start_link() ->
   {ok, spawn_link(?MODULE, init, [])}.
@@ -32,7 +40,7 @@ uniqueref({A, B, C}) ->
 
 % Assuming deliveries are potentially parcels in transit,
 deliver(Loc) ->
-  % Deliveries, items in transit to Loc ~TODO check logic
+  % Deliveries, items in transit to Loc
   Deliveries = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$4', Loc}], ['$3']}]),
   % Pickups, items waiting from Loc
   Pickups = ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$3', Loc}], ['$4']}]),
@@ -73,7 +81,7 @@ pick(Ref) ->
   Length = length(Pick),
   if
     Length >= 1 -> updateManagerByRef(Pick, intransit), {ok, intransit, Ref};
-    Length =< 0 -> {error, Ref, not_intransit, process_instance} %TODO make process_instance identifier dynamic
+    Length =< 0 -> {error, Ref, not_intransit, self()} %TODO make process_instance identifier dynamic
   end.
 
 drop(Ref) ->
@@ -81,7 +89,7 @@ drop(Ref) ->
   Length = length(Drop),
   if
     Length >= 1 -> updateManagerByRef(Drop, delivered), {ok, delivered, Ref};
-    Length =< 0 -> {error, not_reserved, process_instance} %TODO make process_instance identifier dynamic
+    Length =< 0 -> {error, not_reserved, self()} %TODO make process_instance identifier dynamic
   end.
 
 % Used by pick and drop
@@ -93,7 +101,7 @@ transit(Ref, Loc) ->
   Length = length(Trans),
   if
     Length >= 1 -> updateTransitState(Trans, Loc), {ok, indepot, Ref};
-    Length =< 0 -> {error, not_indepot, process_instance} %TODO make process_instance identifier dynamic
+    Length =< 0 -> {error, not_indepot, self()} %TODO make process_instance identifier dynamic
   end.
 
 updateTransitState([[Ref, _Status, _From, To, Kg]], Loc) ->
@@ -119,9 +127,18 @@ formatCargoRoute([{_K, V}]) ->
   {ok, V}.
 
 
-%TODO this is going to have to look in pid tables to checkwhere abouts of an item, i foresee issues here... but a design trade off to stick to the enforeced api
 lookup(Ref) ->
-  {ok, ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'==', '$1', Ref}], ['$$']}]), vehiclePid, ownerPid}.
+  %% It would have been nice to simply
+  %% {ok, ets:lookup(?MODULE, Ref), self(), ?MODULE}
+  %% and return [] for no results but in the interests of API compliance...
+  Result = ets:lookup(?MODULE, Ref),
+  Length = length(Result),
+  if
+    Length > 0 -> {ok, Result, self(), ?MODULE};
+    Length =< 0 -> {error, instance}
+  end.
+
+
 
 % See page 132 Process Design Patterns, A Generic Event Manager Handler
 loop() ->
@@ -135,18 +152,4 @@ loop() ->
     exit ->
       io:format("Exiting"),
       ok
-%% TODO sort error
-%%         =ERROR REPORT==== 26-Nov-2014::23:24:27 ===
-%%       Error in process <0.73.0> with exit value: {badarg,[{dispatcher,notifyDrop,2,[{file,"dispatcher.erl"},{line,130}]},{dispatcher,start,2,[{file,"dispatcher.erl"},{line,38}]},{vehicle,atlocation,2,[{file,"vehicle.erl"},{line,34}]}]}
-
-%%   after 5000 ->
-%%     reorder()
   end.
-
-reorder()->
-  Count = ets:select_count(manager, [{{'$1', '$2', '$3', '$4', '$5'}, [{'/=', '$1', 0}], [true]}]),
-  reorder(Count).
-reorder(Count) when Count =< 0 ->
-  order:place(random:uniform(1000), 0);
-reorder(Count) when Count > 0 ->
-  {orders, Count}.
