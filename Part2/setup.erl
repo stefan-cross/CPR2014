@@ -34,8 +34,7 @@ createtables() ->
   ets:new(towns, [duplicate_bag, named_table]),
   ets:new(distances, [duplicate_bag, named_table]),
   ets:new(depots, [duplicate_bag, named_table]),
-  ets:new(manager, [duplicate_bag, named_table, public]),
-  ets:new(delivered, [set, named_table, public]).
+  ets:new(manager, [duplicate_bag, named_table, public]).
 
 inserttowns([H|T]) ->
   ets:insert(towns, H), inserttowns(T);
