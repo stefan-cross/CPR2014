@@ -1,7 +1,9 @@
 %%%-------------------------------------------------------------------
 %%% @author stefancross
-%%% @copyright (C) 2014, <COMPANY>
+%%% @copyright (C) 2014, <stefancross>
 %%% @doc
+%%%
+%%% Practical Part 1: Implementing a Journey Planner
 %%%
 %%% The following module implements a Journey planner, taking a config
 %%% file to establish locations and their distances apart. The Planner
@@ -53,24 +55,26 @@ routing(To, [To|_T]) -> [];
 routing(_From, []) -> [].
 
 %%%===================================================================
-%%% Internal functions
+%%  Recieving loop pattern
 %%%===================================================================
-
-%% Calls supporting functions to set of ETS tabs and import the config
-init() ->
-  register(?MODULE, self()),
-  createtables(),
-  import(file:consult("../file.conf.csv")),
-  createDigraph(),
-  loop().
-
-%% Recieving loop pattern
 loop()->
   receive
     {route, {From, To}, Pid} ->
       io:format("Routing request received from ~p ~n", [Pid]),
       Pid ! route(From, To)
   end.
+
+%%%===================================================================
+%%% Internal functions
+%%%===================================================================
+
+%% Calls supporting functions to setup ETS tabs and import the config
+init() ->
+  register(?MODULE, self()),
+  createtables(),
+  import(file:consult("../file.conf.csv")),
+  createDigraph(),
+  loop().
 
 %% Create tables for Towns and Distances
 createtables() ->
@@ -127,4 +131,3 @@ createDigraphEdges(Graph, [[City1, City2, _Dist]|T]) ->
   createDigraphEdges(Graph, T);
 createDigraphEdges(_Graph, []) ->
   io:format("Edges have been created. ~n").
-
