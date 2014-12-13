@@ -18,7 +18,6 @@
 
 %% API
 -export([start/2]).
--compile(export_all).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -60,6 +59,8 @@ atlocation(Pid, Loc) ->
       %% 8. End your round in a cargo station dropping off all remaining parcels you picked
       %% up en route using manager:transit/2. Find your closest cargo station using manager:cargo/1.
       checkDrop(Pid, Loc),
+      % Can replace with other routing function such as gotoDepot/2 but findWork/2 is
+      % best effort with time so far
       findWork(Pid, Loc)
   end.
 
