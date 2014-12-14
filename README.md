@@ -30,6 +30,7 @@ Everything is run from the file.conf.csv in the parent folder to each Part folde
 
 Quick start commands:
 --------------------
+__(from each Part* folder and when in the Erlang shell)__
 
 Compile everything:
 >  c(manager), c(planner), c(vehicle), c(orchestration) ,c(vehicle_sup), c(top_sup).
