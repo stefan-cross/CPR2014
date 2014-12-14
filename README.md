@@ -3,7 +3,7 @@ CPR coursework Oct 2014
 =======================
 
 This paper deals with a Courier Delivery Problem (CDP) in a Discrete Event Simulation (DES)
-addressing concurrency, fault tolerance and scalability issues inherent in the problem in
+addressing concurrency, fault tolerance and scalability issues inherent in the problem using
 Erlangs soft real­time systems. The exercise implements a nationwide parcel delivery
 simulator used to optimise delivery times and reduce transport costs. The simulator runs off a
 configuration file that specifies a list of locations and populations, distances between these
