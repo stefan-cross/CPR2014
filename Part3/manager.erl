@@ -48,7 +48,7 @@ send(From, To, Kg) ->
 %%--------------------------------------------------------------------
 %% @doc
 %% This function will give a list of destiantions that have parcels which
-%% need delivering or picking up, sssuming deliveries are potentially parcels
+%% need delivering or picking up, assuming deliveries are potentially parcels
 %% in transit.
 %% @spec deliver(Loc) -> {ok,LocList}|
 %%                       {error,instance}
@@ -206,7 +206,7 @@ uniqueref({A, B, C}) ->
   (A * 1000000000000) + (B * 1000000) + C.
 
 %% Caluclates how many items can be reserved up to a specified weight
-%% using an accumilator/buffer
+%% using an accumulator/buffer
 weightedReserve([[Ref, _Status, Pid, From, To, Kg] | T], Ac) when Ac >= Kg ->
   [[Ref, reserved,  Pid, From, To, Kg] | weightedReserve(T, (Ac - Kg))];
 weightedReserve([[_Ref, _Status, _Pid, _From, _To, _Kg] | _T], _Ac) -> [];

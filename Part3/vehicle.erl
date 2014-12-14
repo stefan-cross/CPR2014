@@ -66,6 +66,7 @@ atlocation(Pid, Loc) ->
 
 intransit({Pid, From, To, Dist}) ->
   io:format("Vehicle  ~p , in transit ~p~n", [Pid, {From, To, Dist}]),
+  % Sleep to simulate drivetime, tune in to radio 6 ;-)
   timer:sleep(Dist),
   atlocation(Pid, To).
 
@@ -96,7 +97,6 @@ init(Pid, Loc) ->
 %% There are more efficient and nearer ways to achieve this functionality
 %% but in order to maintain the previous planner and manger APIs we format
 %% those functions output.
-
 formatReserve(Loc, {ok, List}, Weight, Pid) -> % how to maximise weight feature
   formatReserve(Loc, List, Weight, Pid);
 formatReserve(Loc, [H|_T], Weight, Pid) ->
@@ -155,7 +155,7 @@ notifyDrop([[Ref, _Status, _Pid, From, To, Kg] | T], Pid) ->
   notifyDrop(T, Pid);
 notifyDrop([], _Pid) -> na.
 
-%%  Check if a a vehicle has any packages eligible for picking up
+%%  Check if a a vehicle has any packages eligible for picking up in current location
 checkPickUps(Pid, Loc) ->
   ets:select(manager, [{{'$1', '$2', '$3', '$4', '$5', '$6'},[{'==','$2', reserved}, {'==','$3', Pid},{'==','$4', Loc}],['$1']}]).
 
