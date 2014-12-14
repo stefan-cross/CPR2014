@@ -4,11 +4,9 @@ Practical Part 1: Implementing a Journey Planner
 Design Notes
 ------------
 
-It was decided to return nested loop of From To so that distance might be able to be included at a later date
-and allow for optimised routing on link cost rather then hop count, however there was not enough time for this
+It was decided to return nested loop of From To so that distance might be able to be included at a later date and allow for optimised routing on link cost rather then hop count, however there was not enough time for this
 
-Although this routing technique is not efficient it is reliable and there were other areas to address
-so during testing we can see inefficiencies such as:
+Although this routing technique is not efficient it is reliable and there were other areas to address so during testing we can see inefficiencies such as:
 
     > planner:route("Szczecin", ["Wrocław", "Radom"]).
     > [["Szczecin",
@@ -19,7 +17,7 @@ so during testing we can see inefficiencies such as:
     > [197,129,195,179,100,197,186],
     > [87,114,111,99,197,130,97,119]]]
 
-May not lead to the most efficient route, but lists:usort removes duplicates effectively
+May not lead to the most efficient route, but lists:usort removes duplicates effectively.
 
 Potentially this could be remedied by removing such duplicates but is also an particularly unfortunate result due to the lists:usort and that these locations are not alphabetically contiguous and I have opted simplicity over complexity with random efficiency. However the aim of this exercise is to flex the power of Erlangs actor concurrency model rather than weigh up hop and distance vector based routing algorithms. We can make gains by can simply test package eligibility to be dropped when in each city and calling manager:reserve whenever the vehicle is empty.
 
