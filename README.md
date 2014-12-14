@@ -20,11 +20,11 @@ will be available online with version control and suporting instructions in a RE
 This file will also include examples of test cases and also an explanation of each sections
 implementation and design decisions.
 
-Part1 - Contains the planner, responsible for routing and path calculation.
-Part2 - Implements the manager with various functions to facilitate parcel distribution.
-Part3 - Introduces vehicles and a delivery algorithm.
-Part4 - Applies supervisors for fault tolerance and a fully automated DES run from one config.
-docs  - Contains the original question paper and also some example data and map visualisations.
++ Part1 - Contains the planner, responsible for routing and path calculation.
++ Part2 - Implements the manager with various functions to facilitate parcel distribution.
++ Part3 - Introduces vehicles and a delivery algorithm.
++ Part4 - Applies supervisors for fault tolerance and a fully automated DES run from one config.
++ docs  - Contains the original question paper and also some example data and map visualisations.
 
 Everything is run from the file.conf.csv in the parent folder to each Part folder. 
 
