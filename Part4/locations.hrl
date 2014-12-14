@@ -1,2 +1,0 @@
--record(towns, {town, population}).
--record(distance, {town1, town2, distance}).
