@@ -200,7 +200,7 @@ init() ->
   register(?MODULE, self()),
   io:format("Manager started ~n"),
   % moved setup operations to its own module
-  orchestrate:init(),
+  setup:init(),
   loop().
 
 %% Creates unique references to track packages using the now() function
