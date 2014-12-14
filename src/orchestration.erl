@@ -10,15 +10,17 @@
 -author("stefancross").
 
 %% API
--export([start_simulation/0, start_vehicles/0]).
+-export([start_simulation/1]).
 
-start_simulation() ->
+%% This is where is all begins, just provide the number of orders you wish to
+%% place in the system when it starts up.
+start_simulation(Orders) when is_integer(Orders)->
   {ok, ?MODULE},
   createtables(),
   import(file:consult("../file.conf.csv")),
   createDigraph(),
   top_sup:start_link(),
-  order:place(100000, 0),
+  order:place(Orders, 1000),
   start_vehicles().
 
 start_vehicles() ->
@@ -39,7 +41,6 @@ import({ok,
   insertVehicles(van, Vans, 1),
   io:format("Config imported. ~n").
 
-%TODO parameterise and reduce seperate functions for locations
 createtables() ->
   ets:new(towns, [duplicate_bag, named_table]),
   ets:new(distances, [duplicate_bag, named_table]),
