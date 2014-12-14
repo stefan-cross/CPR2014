@@ -54,5 +54,6 @@ Upon submission of the coursework the following resources will be made made avai
 
 A dynamic map is available here:
 https://www.google.com/maps/d/edit?mid=zZqQW5ER_nEU.k0nVn_MpDioI
+
 And a Github account also contains this code here:
 https://github.com/stefan-cross/CPR2014
