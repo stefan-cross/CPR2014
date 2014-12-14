@@ -15,7 +15,6 @@
 %% This is where is all begins, just provide the number of orders you wish to
 %% place in the system when it starts up.
 start_simulation(Orders) when is_integer(Orders)->
-  {ok, ?MODULE},
   createtables(),
   import(file:consult("../file.conf.csv")),
   createDigraph(),
