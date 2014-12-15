@@ -34,6 +34,8 @@ The following demonstrates the vehicle_sup being able to handle the failure of a
     Vehicle - van1 , at location: "Kraków" with capacity 87 
     Vehicle  van1 , in transit {"Kraków","Lublin",306}
     ...
+    
+    
     2> exit(whereis(van1), kill).
     Vehicle Supervisor - ERROR: <0.279.0>, killed 
     true
@@ -42,6 +44,8 @@ The following demonstrates the vehicle_sup being able to handle the failure of a
     ...
     Vehicle  truck1 , in transit {[66,105,97,322,121,115,116,111,107],
                                   "Lublin",259}
+    
+    
     3> exit(whereis(truck1), kill).
     Vehicle Supervisor - ERROR: <0.283.0>, killed 
     true
@@ -52,6 +56,8 @@ The following demonstrates the vehicle_sup being able to handle the failure of a
     Vehicle  truck2 , in transit {[66,105,97,322,121,115,116,111,107],
                                   [84,111,114,117,324],
                                   357}
+    
+    
     4> exit(whereis(truck2), kill).
     Vehicle Supervisor - ERROR: <0.284.0>, killed 
     true
@@ -69,18 +75,23 @@ This final part is the implementation of a top level supervisor. Open Telecommun
 In the event that the vehicles supervisor goes down, then they are all restarted again in a one to many fashion, should the planner go down then this is also started again in a one to one fashion. In the event that the manager terminates then we have lost all the orders, and therefore we will have to start all over again anyway.
 
 
-     1>  c(manager), c(planner), c(vehicle), c(orchestration) ,c(vehicle_sup), c(top_sup),
-     {ok,top_sup}
-     2> top_sup:start_link().
-     Manager started
-     {ok,<0.75.0>}
-     3> whereis(manager).
-     <0.77.0>
-     4> whereis(vehicle_sup).
-     <0.76.0>
-     5> whereis(planner).
-     <0.78.0>
-     6> exit(whereis(planner), kill).
-     true
-     7> whereis(planner).
-     <0.83.0>
+    1>  c(manager), c(planner), c(vehicle), c(orchestration) ,c(vehicle_sup), c(top_sup),
+    {ok,top_sup}
+    2> top_sup:start_link().
+    Manager started
+    {ok,<0.75.0>}
+    3> whereis(manager).
+    <0.77.0>
+    4> whereis(vehicle_sup).
+    <0.76.0>
+    5> whereis(planner).
+    <0.78.0>
+    6> exit(whereis(planner), kill).
+    true
+    7> whereis(planner).
+    <0.83.0>
+    8> exit(whereis(manager), kill).
+    Manager started 
+    true
+    9> exit(whereis(manager), kill).
+    Manager started 
