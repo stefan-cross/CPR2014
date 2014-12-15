@@ -45,7 +45,8 @@ route(From, List) ->
   % May not lead to the most efficient route, but lists:usort removes
   % duplicates effectively
   Sorted = lists:usort(List),
-  From, routing(From, Sorted).
+  Route = routing(From, Sorted),
+  validateRoute(Route).
 routing(From, [H|T]) when From /= H ->
   % Could look for route optimisation on the Route var
   % Least number of hops, distance vector rather then link cost based
@@ -71,3 +72,9 @@ loop()->
 init() ->
   register(?MODULE, self()),
   loop().
+
+%% Validate our results as invalid routes return list of false values
+validateRoute([Route|_T]) when is_boolean(Route) ->
+  {error, invalid};
+validateRoute(Route) ->
+  {ok, Route}.

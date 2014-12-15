@@ -8,9 +8,6 @@ Note that the setup items have been refactored out of the planner and also combi
 Compile with:
 > c(setup), c(planner), c(manager).
 
-Run with:
-> manager:start_link().
-
 Visualise with:
 > observer:start().
 > {ok,<0.47.0>}
@@ -19,7 +16,8 @@ The following comments demonstrate the design decisions and compromises made on 
 
 The implementation of the start_link is trivial can can easily be tested:
 
-    > manager:start_link().
+Run with:
+> manager:start_link().
 
 Sending items allows a client to specify a starting point and destination as well as the weight of the item and is returned a unique reference. This unique reference makes use of Erlangs now() built in function as this has the desirable feature of being a monotonic function that always increases and thus requires a global lock to read. This will prevent multiple identical references. This was tested with multiple concurrent orders being placed to ensure that no two references were the same.
 
@@ -56,7 +54,7 @@ The pickup function was relatively straight forward to implement however the int
     > manager:pick(1418421220225738).
     ok
     > manager:pick(1418420153536945).
-    {error,not_picked,1418420153536945}
+    {error,not_reserved,1418420153536945}
 
 
 The drop function is called when a vehicle is at its destination and follows the logical progression of pick/1 and given a reference will allow the update of the record to show that it has arrived at its destination. 
@@ -64,7 +62,7 @@ The drop function is called when a vehicle is at its destination and follows the
     > manager:drop(1418421220225738).
     ok
     > manager:drop(1000000000000000).
-    {error,not_reserved,1000000000000000}
+    {error,not_picked,1000000000000000}
 
 The transit function permits a vehicle to drop an order at a cargo station en route to its final destination. This updates the corresponding order by reference in the manager ETS table and updates the “From” location to be the current cargo station location.
     

@@ -105,7 +105,7 @@ pick(Ref) ->
   Length = length(Pick),
   if
     Length >= 1 -> updateManagerByRef(Pick, intransit), ok; % although {ok, intransit, Ref} would give more clarity
-    Length =< 0 -> {error, not_picked, Ref}
+    Length =< 0 -> {error, not_reserved, Ref} % Sure this should be not_picked?! but following spec..
   end.
 
 %%--------------------------------------------------------------------
@@ -121,7 +121,7 @@ drop(Ref) ->
   Length = length(Drop),
   if
     Length >= 1 -> updateManagerByRef(Drop, delivered), ok; % although {ok, delivered, Ref} would give more clarity
-    Length =< 0 -> {error, not_reserved, Ref}
+    Length =< 0 -> {error, not_picked, Ref} % Sure this should be not_dropped?! but following spec..
   end.
 
 %%--------------------------------------------------------------------
@@ -138,7 +138,7 @@ transit(Ref, Loc) ->
   Length = length(Trans),
   if
     Length >= 1 -> updateTransitState(Trans, Loc), ok; % although {ok, indepot, Ref} would give more clarity
-    Length =< 0 -> {error, not_picked, Ref}
+    Length =< 0 -> {error, not_picked, Ref} % Sure this should be not_transit?! but following spec..
   end.
 
 %%--------------------------------------------------------------------
@@ -170,7 +170,7 @@ lookup(Ref) ->
   Length = length(Result),
   if
     Length > 0 -> {ok, Result, self(), ?MODULE};
-    Length =< 0 -> {error, instance}
+    Length =< 0 -> {error, Ref}
   end.
 
 
