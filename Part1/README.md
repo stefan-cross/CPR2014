@@ -1,21 +1,23 @@
 Practical Part 1: Implementing a Journey Planner 
 ================================================
 
-Design Notes
-------------
-
 It was decided to return nested loop of From To so that distance might be able to be included at a later date and allow for optimised routing on link cost rather then hop count, however there was not enough time for this
 
-Although this routing technique is not efficient it is reliable and there were other areas to address so during testing we can see inefficiencies such as:
+Compile with:
+> c(planner).
 
-    > planner:route("Szczecin", ["Wrocław", "Radom"]).
-    > [["Szczecin",
-    > [87,114,111,99,197,130,97,119],
-    > [197,129,195,179,100,197,186],
-    > "Radom"],
-    > ["Radom",
-    > [197,129,195,179,100,197,186],
-    > [87,114,111,99,197,130,97,119]]]
+Run with:
+> planner:start_link().
+
+
+Although the routing technique is not efficient it is reliable and there were other areas to address so during testing we can see inefficiencies such as:
+
+    >planner:route("Szczecin", ["Wrocław", "Radom"]).
+    {ok,[["Szczecin",
+          [87,114,111,99,322,97,119],
+          [321,243,100,378],
+          "Radom"],
+         ["Radom",[321,243,100,378],[87,114,111,99,322,97,119]]]}
 
 May not lead to the most efficient route, but lists:usort removes duplicates effectively.
 
@@ -28,14 +30,13 @@ The loop functionality was added later to permit for message passing to ascertai
     > planner:start_link().
     > {ok,planner}
     > planner:route("Wrocław", ["Katowice"]).
-    > [[[87,114,111,99,197,130,97,119],"Katowice"]]
+    {ok,[[[87,114,111,99,322,97,119],"Katowice"]]}
     > flush().
-    > ok
+    ok
     > planner ! {route, {"Wrocław", ["Katowice"]}, self()}.
-    > Routing request recieved from <0.31.0>
-    > {route,{[87,114,111,99,197,130,97,119],["Katowice"]},
-    > <0.31.0>}
+    Routing request received from <0.55.0> 
+    {route,{[87,114,111,99,322,97,119],["Katowice"]},<0.55.0>}
     > flush().
-    > Shell got [[[87,114,111,99,197,130,97,119],"Katowice"]]
-    > ok
-    >
+    Shell got {ok,[[[87,114,111,99,322,97,119],"Katowice"]]}
+    ok
+    > 
