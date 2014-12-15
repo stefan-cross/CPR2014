@@ -40,3 +40,8 @@ The loop functionality was added later to permit for message passing to ascertai
     Shell got {ok,[[[87,114,111,99,322,97,119],"Katowice"]]}
     ok
     > 
+    
+We can also test that the planner wont accept locations not imported from the configuration:
+
+    > planner:route("London", ["Oxford"]).
+    {error,invalid}
