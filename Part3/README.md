@@ -23,6 +23,7 @@ The following demonstrates the starting of two vehicles, with differing capaciti
 
 Basic testing
 -------------
+Note the capacity of the different vehicles and also the accurate routing in effect.
 
     > c(orchestrate), c(planner), c(manager), c(order), c(vehicle), orchestrate:init(100), observer:start().
     Config imported. 
@@ -35,6 +36,8 @@ Basic testing
     Order sent: 1418499962720639 [66,105,97,197,130,121,115,116,111,107] "Lublin" 478 
     Order sent: 1418499962721048 [87,114,111,99,197,130,97,119] "Warszawa" 458 
     …
+    
+    
     > vehicle:start(van1, "Warszawa").
     Vehicle - van1 , at location: "Warszawa" with capacity 221 
     {ok,<0.80.0>}
@@ -45,6 +48,8 @@ Basic testing
     > Vehicle  van1 , in transit {"Radom","Sosnowiec",221}
     > Vehicle - van1 , at location: "Sosnowiec" with capacity 1000 
     …
+    
+    
     > vehicle:start(truck1, "Warszawa").
     > {ok,<0.82.0>}
     > Vehicle - truck1 , at location: "Warszawa" with capacity 18650 
