@@ -9,14 +9,14 @@ simulator used to optimise delivery times and reduce transport costs. The simula
 configuration file that specifies a list of locations and populations, distances between these
 locations, and the starting locations of a fleet of vehicles which have different capacities.
 The simulator will consist of a dispatcher informing the vans and trucks where to pick up and
-deliver parcels, as well as a journey planner, telling them which routes to take in­between
+deliver parcels, as well as a journey planner, telling them which routes to take in-between
 cities. When the simulator is up and running, the system is ready to take in new parcel
 delivery orders. By testing different dispatch strategies, routes between cities and vehicle
 behaviour will provide metrics which allows us to optimise the service in relation to delivery
 times, capacity and fuel consumption.
 
 All code and working is provided in the same folder that this document was delivered in and
-will be available online with version control and suporting instructions in a README.md file.
+will be available online with version control and supporting instructions in a README.md file.
 This file will also include examples of test cases and also an explanation of each sections
 implementation and design decisions.
 
@@ -46,6 +46,9 @@ Produce Docs
 
 Run tests (where applicable):
 > c(manager_test), manager_test:test().
+
+View lists as strings:
+> io:format("~s~n", [[83, 97, 109, 112, 108, 101]]).
 
 
 Please consult individual folder README files for more instructions.
